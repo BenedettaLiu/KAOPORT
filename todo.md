@@ -9,3 +9,9 @@
 - [x] 驗證所有完成項目
 - [ ] 建立完成版本並交付專案
 - [x] 檢查並整合使用者提供的 Android APK GitHub Actions 工作流程
+- [x] 確認 GitHub App 已授權 KAOPORT，且 Contents 權限為 Read and write
+- [x] 重新核對 GitHub App 對 KAOPORT 的 Contents 寫入與 Actions 存取是否實際生效
+- [x] 重新觸發 KAOPORT 的 Android APK GitHub Actions 工作流程並確認執行狀態
+- [x] 推送 KaohsiungPortShipQuery 來源與可建置 APK 工作流程至 KAOPORT 主分支
+- [x] 重新執行 KAOPORT Android APK 打包並確認最終結果
+- [x] 修正 Android APK 工作流程的 pnpm 版本衝突
