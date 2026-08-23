@@ -1,0 +1,57 @@
+name: Test GitHub Permissions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  permission-test:
+    name: Verify Contents read/write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read repository content
+        shell: bash
+        run: |
+          test -r .gitignore
+          echo "Contents read succeeded: .gitignore is readable."
+          echo "Bytes read: $(wc -c < .gitignore)"
+
+      - name: Write to an isolated test branch
+        shell: bash
+        run: |
+          TEST_BRANCH="permission-test/${GITHUB_RUN_ID}"
+          echo "TEST_BRANCH=${TEST_BRANCH}" >> "$GITHUB_ENV"
+
+          git switch --create "$TEST_BRANCH"
+          printf 'GitHub Actions permission test\nrun_id=%s\n' "$GITHUB_RUN_ID" > .github/permissions-test.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/permissions-test.txt
+          git commit -m "test: verify GitHub Actions contents write permission"
+          git push --set-upstream origin "$TEST_BRANCH"
+          echo "Contents write succeeded: pushed ${TEST_BRANCH}."
+
+      - name: Verify the remote write
+        shell: bash
+        run: |
+          git fetch origin "$TEST_BRANCH"
+          git show "origin/${TEST_BRANCH}:.github/permissions-test.txt"
+          echo "Remote write verification succeeded."
+
+      - name: Delete the isolated test branch
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [ -n "${TEST_BRANCH:-}" ]; then
+            git push origin --delete "$TEST_BRANCH" || true
+            echo "Cleanup attempted for ${TEST_BRANCH}."
+          fi
