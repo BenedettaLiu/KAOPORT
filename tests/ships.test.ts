@@ -10,11 +10,12 @@ describe("船舶資料篩選", () => {
     expect(result.every((ship) => ship.status === "berthed")).toBe(true);
   });
 
-  it("可由船名、航次、IMO 或泊位搜尋", () => {
+  it("可由船名、航次、IMO、泊位或來源港搜尋", () => {
     expect(filterShips(shipRecords, "aurora", "all").map((ship) => ship.id)).toEqual(["harbor-aurora"]);
     expect(filterShips(shipRecords, "PC-381W", "all").map((ship) => ship.id)).toEqual(["pacific-cedar"]);
     expect(filterShips(shipRecords, "9712534", "all").map((ship) => ship.id)).toEqual(["formosa-pioneer"]);
     expect(filterShips(shipRecords, "蓬萊商港區", "all").map((ship) => ship.id)).toEqual(["meridian-trader"]);
+    expect(filterShips(shipRecords, "基隆港", "all").map((ship) => ship.id)).toEqual(["harbor-aurora"]);
   });
 
   it("同時套用搜尋字與狀態條件", () => {
