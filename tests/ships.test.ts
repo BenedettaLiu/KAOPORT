@@ -23,6 +23,11 @@ describe("船舶資料篩選", () => {
     expect(filterShips(shipRecords, "蓬萊", "berthed")).toHaveLength(0);
   });
 
+  it("可將來源港與船名進階條件與狀態篩選合併使用", () => {
+    expect(filterShips(shipRecords, "", "arriving", { name: "pacific", originPort: "台中" }).map((ship) => ship.id)).toEqual(["pacific-cedar"]);
+    expect(filterShips(shipRecords, "", "arriving", { name: "swan", originPort: "台中" })).toHaveLength(0);
+  });
+
   it("可用識別碼取得船舶，未知識別碼回傳 undefined", () => {
     expect(getShipById("eastern-swan")?.name).toBe("EASTERN SWAN");
     expect(getShipById("not-found")).toBeUndefined();
@@ -48,5 +53,6 @@ describe("船舶資料篩選", () => {
     expect(getFilterValues(records, "berth")).toEqual(["#63碼頭", "#77碼頭"]);
     expect(filterUpcomingArrivals(records, "#77碼頭", "all", now).map((ship) => ship.id)).toEqual(["pacific-cedar"]);
     expect(filterUpcomingArrivals(records, "all", "散裝貨輪", now).map((ship) => ship.id)).toEqual(["eastern-swan"]);
+    expect(filterUpcomingArrivals(records, "all", "all", { name: "PACIFIC", originPort: "台中" }, now).map((ship) => ship.id)).toEqual(["pacific-cedar"]);
   });
 });

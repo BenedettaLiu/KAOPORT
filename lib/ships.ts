@@ -172,7 +172,17 @@ export const shipRecords: ShipRecord[] = [
 
 export type ShipFilter = "all" | ShipStatus;
 
-export function filterShips(records: ShipRecord[], query: string, filter: ShipFilter): ShipRecord[] {
+export type ShipAdvancedFilters = {
+  name?: string;
+  originPort?: string;
+};
+
+function includesNormalized(value: string, query: string | undefined): boolean {
+  const normalized = query?.trim().toLocaleLowerCase() ?? "";
+  return normalized.length === 0 || value.toLocaleLowerCase().includes(normalized);
+}
+
+export function filterShips(records: ShipRecord[], query: string, filter: ShipFilter, advanced: ShipAdvancedFilters = {}): ShipRecord[] {
   const normalizedQuery = query.trim().toLocaleLowerCase();
 
   return records.filter((ship) => {
@@ -183,7 +193,7 @@ export function filterShips(records: ShipRecord[], query: string, filter: ShipFi
         value.toLocaleLowerCase().includes(normalizedQuery),
       );
 
-    return matchesFilter && matchesQuery;
+    return matchesFilter && matchesQuery && includesNormalized(ship.name, advanced.name) && includesNormalized(ship.originPort, advanced.originPort);
   });
 }
 
@@ -203,8 +213,21 @@ export function getFilterValues(records: ShipRecord[], field: "berth" | "vesselT
   return [...new Set(records.map((record) => record[field]).filter((value) => value && value !== "尚未提供"))].sort((a, b) => a.localeCompare(b, "zh-TW"));
 }
 
-export function filterUpcomingArrivals(records: ShipRecord[], berth: string, vesselType: string, now = new Date()): ShipRecord[] {
-  return getUpcomingArrivals(records, now).filter((ship) => (berth === "all" || ship.berth === berth) && (vesselType === "all" || ship.vesselType === vesselType));
+export function filterUpcomingArrivals(
+  records: ShipRecord[],
+  berth: string,
+  vesselType: string,
+  advancedOrNow: ShipAdvancedFilters | Date = {},
+  suppliedNow = new Date(),
+): ShipRecord[] {
+  const advanced = advancedOrNow instanceof Date ? {} : advancedOrNow;
+  const now = advancedOrNow instanceof Date ? advancedOrNow : suppliedNow;
+  return getUpcomingArrivals(records, now).filter((ship) => (
+    (berth === "all" || ship.berth === berth)
+    && (vesselType === "all" || ship.vesselType === vesselType)
+    && includesNormalized(ship.name, advanced.name)
+    && includesNormalized(ship.originPort, advanced.originPort)
+  ));
 }
 
 export function getShipById(id: string | undefined): ShipRecord | undefined {

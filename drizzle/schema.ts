@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, index, int, mediumtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +25,39 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/** Last successful official KHH vessel snapshot, retained across server cold starts. */
+export const shipDataCaches = mysqlTable("ship_data_caches", {
+  cacheKey: varchar("cacheKey", { length: 64 }).primaryKey(),
+  payload: mediumtext("payload").notNull(),
+  source: varchar("source", { length: 24 }).notNull(),
+  notice: text("notice"),
+  syncedAt: timestamp("syncedAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ShipDataCache = typeof shipDataCaches.$inferSelect;
+
+/** Anonymous per-device preferences for favorite-vessel push notifications. */
+export const shipPushSubscriptions = mysqlTable("ship_push_subscriptions", {
+  deviceId: varchar("deviceId", { length: 80 }).primaryKey(),
+  expoPushToken: varchar("expoPushToken", { length: 255 }).notNull(),
+  favoriteShipIds: mediumtext("favoriteShipIds").notNull(),
+  statusSnapshot: mediumtext("statusSnapshot").notNull(),
+  notificationsEnabled: boolean("notificationsEnabled").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("ship_push_subscriptions_enabled_idx").on(table.notificationsEnabled)]);
+
+export type ShipPushSubscription = typeof shipPushSubscriptions.$inferSelect;
+
+/** Persists the platform-issued identifier used to manage the project-level ten-minute sync job. */
+export const shipSyncSchedules = mysqlTable("ship_sync_schedules", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull().unique(),
+  taskUid: varchar("taskUid", { length: 128 }).notNull().unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ShipSyncSchedule = typeof shipSyncSchedules.$inferSelect;

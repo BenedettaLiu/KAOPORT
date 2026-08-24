@@ -1,6 +1,12 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import {
+  InsertUser,
+  shipDataCaches,
+  shipPushSubscriptions,
+  shipSyncSchedules,
+  users,
+} from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +95,93 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+const SHIP_CACHE_KEY = "kaohsiung-port-official-v1";
+
+export async function getOfficialShipCache() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(shipDataCaches).where(eq(shipDataCaches.cacheKey, SHIP_CACHE_KEY)).limit(1);
+  return result[0];
+}
+
+export async function saveOfficialShipCache(input: {
+  payload: string;
+  source: string;
+  notice?: string;
+  syncedAt: Date;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const values = { cacheKey: SHIP_CACHE_KEY, ...input, notice: input.notice ?? null };
+  await db.insert(shipDataCaches).values(values).onDuplicateKeyUpdate({
+    set: {
+      payload: values.payload,
+      source: values.source,
+      notice: values.notice,
+      syncedAt: values.syncedAt,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export type ShipPushSubscriptionInput = {
+  deviceId: string;
+  expoPushToken: string;
+  favoriteShipIds: string[];
+  notificationsEnabled?: boolean;
+};
+
+export async function upsertShipPushSubscription(input: ShipPushSubscriptionInput): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(shipPushSubscriptions).where(eq(shipPushSubscriptions.deviceId, input.deviceId)).limit(1);
+  const favoriteShipIds = JSON.stringify([...new Set(input.favoriteShipIds)].slice(0, 500));
+  const values = {
+    deviceId: input.deviceId,
+    expoPushToken: input.expoPushToken,
+    favoriteShipIds,
+    statusSnapshot: existing[0]?.statusSnapshot ?? "{}",
+    notificationsEnabled: input.notificationsEnabled ?? true,
+  };
+  await db.insert(shipPushSubscriptions).values(values).onDuplicateKeyUpdate({
+    set: {
+      expoPushToken: values.expoPushToken,
+      favoriteShipIds: values.favoriteShipIds,
+      notificationsEnabled: values.notificationsEnabled,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function getEnabledShipPushSubscriptions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(shipPushSubscriptions).where(eq(shipPushSubscriptions.notificationsEnabled, true));
+}
+
+export async function saveShipPushStatusSnapshot(deviceId: string, statusSnapshot: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(shipPushSubscriptions).set({ statusSnapshot, updatedAt: new Date() }).where(eq(shipPushSubscriptions.deviceId, deviceId));
+}
+
+export async function disableShipPushSubscription(deviceId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(shipPushSubscriptions).set({ notificationsEnabled: false, updatedAt: new Date() }).where(eq(shipPushSubscriptions.deviceId, deviceId));
+}
+
+export async function getShipSyncScheduleByTaskUid(taskUid: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(shipSyncSchedules).where(eq(shipSyncSchedules.taskUid, taskUid)).limit(1);
+  return result[0];
+}
+
+export async function upsertShipSyncSchedule(name: string, taskUid: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("資料庫不可用，無法保存船期同步排程。");
+  await db.insert(shipSyncSchedules).values({ name, taskUid }).onDuplicateKeyUpdate({
+    set: { taskUid, updatedAt: new Date() },
+  });
+}

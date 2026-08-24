@@ -1,4 +1,5 @@
 import type { ShipRecord, ShipStatus } from "../lib/ships";
+import { getOfficialShipCache, saveOfficialShipCache } from "./db";
 
 const OFFICIAL_ENDPOINTS = {
   forecast: "https://tpnet.twport.com.tw/IFAWeb/Reports/OpenData/GetOpenData?port=KHH&type=5",
@@ -9,9 +10,14 @@ const OFFICIAL_ENDPOINTS = {
 export type OfficialShipSnapshot = {
   ships: ShipRecord[];
   updatedAt: string;
-  source: "official" | "unavailable";
+  source: "official" | "cached" | "unavailable";
   notice?: string;
 };
+
+export const OFFICIAL_SNAPSHOT_CACHE_TTL_MS = 8 * 60 * 1000;
+
+let inMemorySnapshot: OfficialShipSnapshot | null = null;
+let inFlightRefresh: Promise<OfficialShipSnapshot> | null = null;
 
 type OfficialShip = Record<string, string>;
 
@@ -83,14 +89,91 @@ function mergeShipRecords(groups: ShipRecord[][]): ShipRecord[] {
   return [...merged.values()].sort((left, right) => (left.eta ?? left.lastUpdated).localeCompare(right.eta ?? right.lastUpdated));
 }
 
-export async function getOfficialShipSnapshot(): Promise<OfficialShipSnapshot> {
+export function isOfficialSnapshotFresh(updatedAt: string, now = Date.now()): boolean {
+  const updatedAtMs = new Date(updatedAt).getTime();
+  return Number.isFinite(updatedAtMs) && now - updatedAtMs >= 0 && now - updatedAtMs < OFFICIAL_SNAPSHOT_CACHE_TTL_MS;
+}
+
+function asCachedSnapshot(snapshot: OfficialShipSnapshot, notice?: string): OfficialShipSnapshot {
+  return {
+    ships: snapshot.ships,
+    updatedAt: snapshot.updatedAt,
+    source: "cached",
+    notice: notice ?? "顯示最近一次成功同步的快取資料。",
+  };
+}
+
+async function getPersistedSnapshot(): Promise<OfficialShipSnapshot | null> {
+  try {
+    const cached = await getOfficialShipCache();
+    if (!cached) return null;
+    const ships = JSON.parse(cached.payload) as ShipRecord[];
+    if (!Array.isArray(ships) || ships.length === 0) return null;
+    return {
+      ships,
+      updatedAt: cached.syncedAt.toISOString(),
+      source: "cached",
+      notice: cached.notice ?? undefined,
+    };
+  } catch (error) {
+    console.warn("[Ship data] Failed to read persisted cache:", error);
+    return null;
+  }
+}
+
+async function cacheSnapshot(snapshot: OfficialShipSnapshot): Promise<void> {
+  inMemorySnapshot = snapshot;
+  try {
+    await saveOfficialShipCache({
+      payload: JSON.stringify(snapshot.ships),
+      source: "official",
+      notice: snapshot.notice,
+      syncedAt: new Date(snapshot.updatedAt),
+    });
+  } catch (error) {
+    console.warn("[Ship data] Failed to save persisted cache:", error);
+  }
+}
+
+async function fetchAndCacheOfficialSnapshot(): Promise<OfficialShipSnapshot> {
   try {
     const [forecastXml, arrivalsXml, departuresXml] = await Promise.all([fetchOfficialXml(OFFICIAL_ENDPOINTS.forecast), fetchOfficialXml(OFFICIAL_ENDPOINTS.arrivals), fetchOfficialXml(OFFICIAL_ENDPOINTS.departures)]);
     const ships = mergeShipRecords([parseOfficialShipXml(forecastXml, "arriving"), parseOfficialShipXml(arrivalsXml, "berthed"), parseOfficialShipXml(departuresXml, "departing")]);
     if (ships.length === 0) throw new Error("官方資料未回傳船舶紀錄");
-    return { ships, updatedAt: new Date().toISOString(), source: "official" };
+    const snapshot: OfficialShipSnapshot = { ships, updatedAt: new Date().toISOString(), source: "official" };
+    await cacheSnapshot(snapshot);
+    return snapshot;
   } catch (error) {
     const detail = error instanceof Error ? error.message : "未知錯誤";
+    const fallback = inMemorySnapshot ?? await getPersistedSnapshot();
+    if (fallback) {
+      return asCachedSnapshot(fallback, `官方資料更新暫時失敗（${detail}），目前顯示最近一次成功同步的快取資料。`);
+    }
     return { ships: [], updatedAt: new Date().toISOString(), source: "unavailable", notice: `官方高雄港船期資料暫時無法取得（${detail}）。請稍後下拉更新。` };
   }
+}
+
+export async function refreshOfficialShipSnapshot(): Promise<OfficialShipSnapshot> {
+  if (!inFlightRefresh) {
+    inFlightRefresh = fetchAndCacheOfficialSnapshot().finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
+}
+
+export async function getOfficialShipSnapshot(options: { forceRefresh?: boolean } = {}): Promise<OfficialShipSnapshot> {
+  if (!options.forceRefresh && inMemorySnapshot && isOfficialSnapshotFresh(inMemorySnapshot.updatedAt)) {
+    return asCachedSnapshot(inMemorySnapshot);
+  }
+
+  if (!options.forceRefresh) {
+    const persisted = await getPersistedSnapshot();
+    if (persisted && isOfficialSnapshotFresh(persisted.updatedAt)) {
+      inMemorySnapshot = persisted;
+      return asCachedSnapshot(persisted);
+    }
+  }
+
+  return refreshOfficialShipSnapshot();
 }
