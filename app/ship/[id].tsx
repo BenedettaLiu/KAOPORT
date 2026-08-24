@@ -1,9 +1,11 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { ScrollView, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
-import { getShipById, SHIP_STATUS_META, type ShipRecord } from "@/lib/ships";
+import { isShipFavorite, toggleShipFavorite } from "@/lib/ship-favorites";
+import { formatShipTime, getShipById, SHIP_STATUS_META, type ShipRecord } from "@/lib/ships";
 
 function DetailRow({ label, value }: { label: string; value: string | null }) {
   return (
@@ -26,6 +28,15 @@ function SpecTile({ icon, label, value }: { icon: "directions-boat" | "public" |
 
 function ShipDetail({ ship }: { ship: ShipRecord }) {
   const meta = SHIP_STATUS_META[ship.status];
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    isShipFavorite(ship.id).then(setIsFavorite).catch(() => setIsFavorite(false));
+  }, [ship.id]);
+
+  const handleFavorite = async () => {
+    setIsFavorite(await toggleShipFavorite(ship));
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -34,7 +45,9 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
           <MaterialIcons color="#173042" name="arrow-back" size={22} />
         </Pressable>
         <Text style={styles.topBarTitle}>船舶詳情</Text>
-        <View style={styles.topBarSpacer} />
+        <Pressable accessibilityLabel={isFavorite ? "取消收藏此船舶" : "收藏此船舶"} onPress={handleFavorite} style={({ pressed }) => [styles.favoriteButton, pressed && styles.buttonPressed]}>
+          <MaterialIcons color={isFavorite ? "#0B4F71" : "#173042"} name={isFavorite ? "bookmark" : "bookmark-border"} size={22} />
+        </Pressable>
       </View>
 
       <Text style={styles.eyebrow}>VESSEL INFORMATION</Text>
@@ -60,9 +73,9 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
         <View style={styles.infoCard}>
           <DetailRow label="目前／預定泊位" value={ship.berth} />
           <DetailRow label="來源港" value={ship.originPort} />
-          <DetailRow label="預計入港" value={ship.eta} />
-          <DetailRow label="實際入港" value={ship.actualArrival} />
-          <DetailRow label="預計離港" value={ship.etd} />
+          <DetailRow label="預計入港" value={formatShipTime(ship.eta)} />
+          <DetailRow label="實際入港" value={formatShipTime(ship.actualArrival)} />
+          <DetailRow label="預計離港" value={formatShipTime(ship.etd)} />
           <DetailRow label="離港目的地" value={ship.destination} />
         </View>
       </View>
@@ -79,8 +92,8 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
       </View>
 
       <View style={styles.noteCard}><MaterialIcons color="#137A9B" name="info-outline" size={20} /><View style={styles.noteCopy}><Text style={styles.noteTitle}>港方作業註記</Text><Text style={styles.noteText}>{ship.note}</Text></View></View>
-      <View style={styles.updatedRow}><MaterialIcons color="#6C7C87" name="schedule" size={15} /><Text style={styles.updatedText}>資料更新時間：{ship.lastUpdated}</Text></View>
-      <Text style={styles.disclaimer}>此畫面為示範資料，請以港方正式公告為準。</Text>
+      <View style={styles.updatedRow}><MaterialIcons color="#6C7C87" name="schedule" size={15} /><Text style={styles.updatedText}>資料更新時間：{formatShipTime(ship.lastUpdated)}</Text></View>
+      <Text style={styles.disclaimer}>資料來源：高雄港官方開放資料；船期仍以港方正式公告為準。</Text>
     </ScrollView>
   );
 }
@@ -100,7 +113,7 @@ export default function ShipDetailScreen() {
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 30, paddingHorizontal: 20 },
   topBar: { alignItems: "center", flexDirection: "row", height: 46, justifyContent: "space-between", marginBottom: 12 },
-  backButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, topBarTitle: { color: "#173042", fontSize: 16, fontWeight: "800" }, topBarSpacer: { width: 40 },
+  backButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, favoriteButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, topBarTitle: { color: "#173042", fontSize: 16, fontWeight: "800" },
   eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 }, shipName: { color: "#173042", fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 }, voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
   statusBanner: { alignItems: "center", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 22, padding: 13 }, statusIcon: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", width: 36 }, statusCopy: { flex: 1, marginLeft: 10 }, statusLabel: { fontSize: 15, fontWeight: "800", lineHeight: 20 }, statusDescription: { color: "#506773", fontSize: 12, lineHeight: 18, marginTop: 1 },
   routeCard: { alignItems: "center", backgroundColor: "#F0F8FA", borderColor: "#D6EAF0", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 15, padding: 13 }, routeStop: { flex: 1 }, routeStopEnd: { alignItems: "flex-end" }, routeStopLabel: { color: "#637B87", fontSize: 11, lineHeight: 16 }, routeStopValue: { color: "#1F4F61", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 1 }, routeConnector: { alignItems: "center", paddingHorizontal: 8 }, routeConnectorText: { color: "#137A9B", fontSize: 10, fontWeight: "800", lineHeight: 14 },

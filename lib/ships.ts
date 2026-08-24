@@ -19,6 +19,19 @@ export type ShipRecord = {
   note: string;
 };
 
+let activeShipRecords: ShipRecord[] = [];
+
+export function setActiveShipRecords(records: ShipRecord[]): void {
+  activeShipRecords = records;
+}
+
+export function formatShipTime(value: string | null): string {
+  if (!value) return "尚未提供";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+}
+
 export const SHIP_STATUS_META: Record<
   ShipStatus,
   { label: string; color: string; softColor: string; borderColor: string; icon: "anchor" | "south" | "north" }
@@ -175,12 +188,25 @@ export function filterShips(records: ShipRecord[], query: string, filter: ShipFi
 }
 
 /** Returns the current data window's vessels scheduled to enter port within 24 hours. */
-export function getUpcomingArrivals(records: ShipRecord[]): ShipRecord[] {
+export function getUpcomingArrivals(records: ShipRecord[], now = new Date()): ShipRecord[] {
+  const currentTime = now.getTime();
+  const nextDay = currentTime + 24 * 60 * 60 * 1000;
   return records
-    .filter((ship) => ship.status === "arriving" && ship.eta !== null)
-    .sort((first, second) => (first.eta ?? "").localeCompare(second.eta ?? ""));
+    .filter((ship) => {
+      const etaTime = ship.eta ? new Date(ship.eta).getTime() : Number.NaN;
+      return ship.status === "arriving" && Number.isFinite(etaTime) && etaTime >= currentTime && etaTime <= nextDay;
+    })
+    .sort((first, second) => new Date(first.eta ?? 0).getTime() - new Date(second.eta ?? 0).getTime());
+}
+
+export function getFilterValues(records: ShipRecord[], field: "berth" | "vesselType"): string[] {
+  return [...new Set(records.map((record) => record[field]).filter((value) => value && value !== "尚未提供"))].sort((a, b) => a.localeCompare(b, "zh-TW"));
+}
+
+export function filterUpcomingArrivals(records: ShipRecord[], berth: string, vesselType: string, now = new Date()): ShipRecord[] {
+  return getUpcomingArrivals(records, now).filter((ship) => (berth === "all" || ship.berth === berth) && (vesselType === "all" || ship.vesselType === vesselType));
 }
 
 export function getShipById(id: string | undefined): ShipRecord | undefined {
-  return shipRecords.find((ship) => ship.id === id);
+  return activeShipRecords.find((ship) => ship.id === id) ?? shipRecords.find((ship) => ship.id === id);
 }
