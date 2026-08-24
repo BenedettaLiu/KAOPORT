@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { filterShips, getShipById, shipRecords } from "../lib/ships";
+import { filterShips, getShipById, setActiveShipRecords, shipRecords } from "../lib/ships";
 
 describe("船舶資料篩選", () => {
   it("可依狀態僅顯示在港船舶", () => {
@@ -25,5 +25,19 @@ describe("船舶資料篩選", () => {
   it("可用識別碼取得船舶，未知識別碼回傳 undefined", () => {
     expect(getShipById("eastern-swan")?.name).toBe("EASTERN SWAN");
     expect(getShipById("not-found")).toBeUndefined();
+  });
+
+  it("可在資料重新載入後提供最新船舶的詳情資料", () => {
+    const refreshedRecords = [
+      {
+        ...shipRecords[0],
+        id: "official-new-ship",
+        name: "OFFICIAL REFRESHED VESSEL",
+      },
+    ];
+
+    setActiveShipRecords(refreshedRecords);
+    expect(getShipById("official-new-ship")?.name).toBe("OFFICIAL REFRESHED VESSEL");
+    setActiveShipRecords(shipRecords);
   });
 });

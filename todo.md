@@ -15,3 +15,7 @@
 - [x] 推送 KaohsiungPortShipQuery 來源與可建置 APK 工作流程至 KAOPORT 主分支
 - [x] 重新執行 KAOPORT Android APK 打包並確認最終結果
 - [x] 修正 Android APK 工作流程的 pnpm 版本衝突
+- [x] 建立可重新載入的船舶資料來源與更新時間資訊
+- [x] 實作船舶清單下拉更新、載入回饋與錯誤提示
+- [x] 確保下拉更新後的官方船舶資料可開啟詳情頁
+- [x] 驗證下拉更新流程並儲存完成版本
