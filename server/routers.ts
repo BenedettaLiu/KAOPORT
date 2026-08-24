@@ -1,7 +1,11 @@
 import { COOKIE_NAME } from "../shared/const.js";
+import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { upsertShipPushSubscription } from "./db";
+import { getOfficialShipSnapshot } from "./ship-data";
+import { synchronizeOfficialShipsAndNotify } from "./ship-sync";
 
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -14,6 +18,19 @@ export const appRouter = router({
       return {
         success: true,
       } as const;
+    }),
+  }),
+  ships: router({
+    snapshot: publicProcedure.query(() => getOfficialShipSnapshot()),
+    refresh: publicProcedure.mutation(() => synchronizeOfficialShipsAndNotify()),
+    subscribePush: publicProcedure.input(z.object({
+      deviceId: z.string().min(16).max(80),
+      expoPushToken: z.string().min(10).max(255),
+      favoriteShipIds: z.array(z.string().min(1).max(160)).max(500),
+      notificationsEnabled: z.boolean().optional(),
+    })).mutation(async ({ input }) => {
+      await upsertShipPushSubscription(input);
+      return { success: true } as const;
     }),
   }),
 

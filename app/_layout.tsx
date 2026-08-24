@@ -1,7 +1,8 @@
 import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as Notifications from "expo-notifications";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
@@ -18,6 +19,8 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import { getFavoriteShips, subscribeFavoriteChanges } from "@/lib/ship-favorites";
+import { configureShipNotificationChannel, getStoredShipPushRegistration, registerForShipPushNotifications, watchShipPushToken } from "@/lib/ship-notifications";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -25,6 +28,63 @@ const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+function ShipPushBootstrap() {
+  const { mutateAsync: subscribePush } = trpc.ships.subscribePush.useMutation();
+
+  const syncFavoriteSubscription = useCallback(async (replacementToken?: string) => {
+    const favorites = await getFavoriteShips();
+    if (favorites.length === 0) {
+      const stored = await getStoredShipPushRegistration();
+      if (!stored) return;
+      await subscribePush({
+        deviceId: stored.deviceId,
+        expoPushToken: replacementToken ?? stored.expoPushToken,
+        favoriteShipIds: [],
+        notificationsEnabled: false,
+      });
+      return;
+    }
+    const registration = await registerForShipPushNotifications();
+    if (registration.state !== "ready") return;
+    await subscribePush({
+      deviceId: registration.deviceId,
+      expoPushToken: replacementToken ?? registration.expoPushToken,
+      favoriteShipIds: favorites.map((favorite) => favorite.id),
+      notificationsEnabled: true,
+    });
+  }, [subscribePush]);
+
+  useEffect(() => {
+    configureShipNotificationChannel().catch(() => undefined);
+    syncFavoriteSubscription().catch(() => undefined);
+    const unsubscribeFavorites = subscribeFavoriteChanges(() => {
+      syncFavoriteSubscription().catch(() => undefined);
+    });
+    const tokenSubscription = watchShipPushToken((token) => {
+      syncFavoriteSubscription(token).catch(() => undefined);
+    });
+    return () => {
+      unsubscribeFavorites();
+      tokenSubscription.remove();
+    };
+  }, [syncFavoriteSubscription]);
+
+  useEffect(() => {
+    const openNotificationTarget = (notification: { request: { content: { data?: unknown } } }) => {
+      const data = notification.request.content.data;
+      const url = data && typeof data === "object" && "url" in data ? (data as { url?: unknown }).url : undefined;
+      if (typeof url === "string" && url.startsWith("/ship/")) router.push(url as never);
+    };
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response?.notification) openNotificationTarget(response.notification);
+    }).catch(() => undefined);
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => openNotificationTarget(response.notification));
+    return () => subscription.remove();
+  }, []);
+
+  return null;
+}
 
 export default function RootLayout() {
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
@@ -82,6 +142,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
+          <ShipPushBootstrap />
           {/* Default to hiding native headers so raw route segments don't appear (e.g. "(tabs)", "products/[id]"). */}
           {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
           {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}

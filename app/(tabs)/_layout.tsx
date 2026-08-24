@@ -31,8 +31,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "船舶動態",
+          title: "船舶即時動態",
           tabBarIcon: ({ color }) => <IconSymbol size={27} name="list.bullet" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="arrivals"
+        options={{
+          title: "24H 入港預報",
+          tabBarIcon: ({ color }) => <IconSymbol size={25} name="clock.arrow.circlepath" color={color} />,
         }}
       />
     </Tabs>

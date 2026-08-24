@@ -19,6 +19,19 @@ export type ShipRecord = {
   note: string;
 };
 
+let activeShipRecords: ShipRecord[] = [];
+
+export function setActiveShipRecords(records: ShipRecord[]): void {
+  activeShipRecords = records;
+}
+
+export function formatShipTime(value: string | null): string {
+  if (!value) return "尚未提供";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+}
+
 export const SHIP_STATUS_META: Record<
   ShipStatus,
   { label: string; color: string; softColor: string; borderColor: string; icon: "anchor" | "south" | "north" }
@@ -159,7 +172,17 @@ export const shipRecords: ShipRecord[] = [
 
 export type ShipFilter = "all" | ShipStatus;
 
-export function filterShips(records: ShipRecord[], query: string, filter: ShipFilter): ShipRecord[] {
+export type ShipAdvancedFilters = {
+  name?: string;
+  originPort?: string;
+};
+
+function includesNormalized(value: string, query: string | undefined): boolean {
+  const normalized = query?.trim().toLocaleLowerCase() ?? "";
+  return normalized.length === 0 || value.toLocaleLowerCase().includes(normalized);
+}
+
+export function filterShips(records: ShipRecord[], query: string, filter: ShipFilter, advanced: ShipAdvancedFilters = {}): ShipRecord[] {
   const normalizedQuery = query.trim().toLocaleLowerCase();
 
   return records.filter((ship) => {
@@ -170,10 +193,43 @@ export function filterShips(records: ShipRecord[], query: string, filter: ShipFi
         value.toLocaleLowerCase().includes(normalizedQuery),
       );
 
-    return matchesFilter && matchesQuery;
+    return matchesFilter && matchesQuery && includesNormalized(ship.name, advanced.name) && includesNormalized(ship.originPort, advanced.originPort);
   });
 }
 
+/** Returns the current data window's vessels scheduled to enter port within 24 hours. */
+export function getUpcomingArrivals(records: ShipRecord[], now = new Date()): ShipRecord[] {
+  const currentTime = now.getTime();
+  const nextDay = currentTime + 24 * 60 * 60 * 1000;
+  return records
+    .filter((ship) => {
+      const etaTime = ship.eta ? new Date(ship.eta).getTime() : Number.NaN;
+      return ship.status === "arriving" && Number.isFinite(etaTime) && etaTime >= currentTime && etaTime <= nextDay;
+    })
+    .sort((first, second) => new Date(first.eta ?? 0).getTime() - new Date(second.eta ?? 0).getTime());
+}
+
+export function getFilterValues(records: ShipRecord[], field: "berth" | "vesselType"): string[] {
+  return [...new Set(records.map((record) => record[field]).filter((value) => value && value !== "尚未提供"))].sort((a, b) => a.localeCompare(b, "zh-TW"));
+}
+
+export function filterUpcomingArrivals(
+  records: ShipRecord[],
+  berth: string,
+  vesselType: string,
+  advancedOrNow: ShipAdvancedFilters | Date = {},
+  suppliedNow = new Date(),
+): ShipRecord[] {
+  const advanced = advancedOrNow instanceof Date ? {} : advancedOrNow;
+  const now = advancedOrNow instanceof Date ? advancedOrNow : suppliedNow;
+  return getUpcomingArrivals(records, now).filter((ship) => (
+    (berth === "all" || ship.berth === berth)
+    && (vesselType === "all" || ship.vesselType === vesselType)
+    && includesNormalized(ship.name, advanced.name)
+    && includesNormalized(ship.originPort, advanced.originPort)
+  ));
+}
+
 export function getShipById(id: string | undefined): ShipRecord | undefined {
-  return shipRecords.find((ship) => ship.id === id);
+  return activeShipRecords.find((ship) => ship.id === id) ?? shipRecords.find((ship) => ship.id === id);
 }

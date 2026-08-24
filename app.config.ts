@@ -38,6 +38,8 @@ const env = {
   androidPackage: bundleId,
 };
 
+const expoPushProjectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
@@ -45,6 +47,7 @@ const config: ExpoConfig = {
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
+  extra: expoPushProjectId ? { eas: { projectId: expoPushProjectId } } : undefined,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
@@ -86,6 +89,13 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    [
+      "expo-notifications",
+      {
+        color: "#137A9B",
+        defaultChannel: "ship-status",
+      },
+    ],
     [
       "expo-audio",
       {
