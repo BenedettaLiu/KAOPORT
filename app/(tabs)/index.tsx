@@ -14,6 +14,7 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import {
   filterShips,
+  getUpcomingArrivals,
   shipRecords,
   SHIP_STATUS_META,
   type ShipFilter,
@@ -90,7 +91,10 @@ function ShipCard({ ship }: { ship: ShipRecord }) {
           <Text style={styles.detailLabel}>{ship.status === "departing" ? "預計離港" : "入港狀態"}</Text>
           <Text style={styles.detailValue}>{ship.status === "departing" ? ship.etd : ship.eta}</Text>
         </View>
-        <MaterialIcons color="#6C7C87" name="chevron-right" size={23} />
+        <View style={styles.detailAction}>
+          <Text style={styles.detailActionText}>查看詳情</Text>
+          <MaterialIcons color="#0B4F71" name="chevron-right" size={22} />
+        </View>
       </View>
     </Pressable>
   );
@@ -104,6 +108,7 @@ export default function HomeScreen() {
     () => filterShips(shipRecords, query, activeFilter),
     [activeFilter, query],
   );
+  const upcomingArrivalCount = useMemo(() => getUpcomingArrivals(shipRecords).length, []);
 
   const renderShip: ListRenderItem<ShipRecord> = ({ item }) => <ShipCard ship={item} />;
 
@@ -150,6 +155,21 @@ export default function HomeScreen() {
               <MaterialIcons color="#567080" name="schedule" size={15} />
               <Text style={styles.updatedText}>最近更新：08/24 09:15</Text>
             </View>
+
+            <Pressable
+              accessibilityLabel="查看未來 24 小時準備入港船舶"
+              onPress={() => router.navigate("/arrivals" as never)}
+              style={({ pressed }) => [styles.arrivalForecastLink, pressed && styles.buttonPressed]}
+            >
+              <View style={styles.arrivalForecastIcon}>
+                <MaterialIcons color="#137A9B" name="schedule" size={19} />
+              </View>
+              <View style={styles.arrivalForecastCopy}>
+                <Text style={styles.arrivalForecastTitle}>未來 24 小時準備入港</Text>
+                <Text style={styles.arrivalForecastText}>{upcomingArrivalCount} 艘船舶已列入進港預報</Text>
+              </View>
+              <MaterialIcons color="#137A9B" name="chevron-right" size={22} />
+            </Pressable>
 
             <View style={styles.searchField}>
               <MaterialIcons color="#5E7380" name="search" size={21} />
@@ -263,6 +283,11 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   updatedText: { color: "#567080", fontSize: 12, lineHeight: 18 },
+  arrivalForecastLink: { alignItems: "center", backgroundColor: "#EAF5F8", borderColor: "#C9E4EC", borderRadius: 14, borderWidth: 1, flexDirection: "row", marginTop: 14, padding: 11 },
+  arrivalForecastIcon: { alignItems: "center", backgroundColor: "#D8EDF3", borderRadius: 15, height: 30, justifyContent: "center", width: 30 },
+  arrivalForecastCopy: { flex: 1, marginLeft: 9 },
+  arrivalForecastTitle: { color: "#176B85", fontSize: 13, fontWeight: "800", lineHeight: 18 },
+  arrivalForecastText: { color: "#557784", fontSize: 11, lineHeight: 16, marginTop: 1 },
   searchField: {
     alignItems: "center",
     backgroundColor: "#FFFFFF",
@@ -341,6 +366,8 @@ const styles = StyleSheet.create({
   detailCell: { flex: 1, paddingRight: 8 },
   detailLabel: { color: "#71838D", fontSize: 11, lineHeight: 16 },
   detailValue: { color: "#284252", fontSize: 12, fontWeight: "700", lineHeight: 18, marginTop: 1 },
+  detailAction: { alignItems: "center", flexDirection: "row", marginLeft: 2 },
+  detailActionText: { color: "#0B4F71", fontSize: 11, fontWeight: "800" },
   emptyState: { alignItems: "center", paddingHorizontal: 22, paddingTop: 34 },
   emptyIcon: {
     alignItems: "center",

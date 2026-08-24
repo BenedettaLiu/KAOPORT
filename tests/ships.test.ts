@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { filterShips, getShipById, shipRecords } from "../lib/ships";
+import { filterShips, getShipById, getUpcomingArrivals, shipRecords } from "../lib/ships";
 
 describe("船舶資料篩選", () => {
   it("可依狀態僅顯示在港船舶", () => {
@@ -26,5 +26,12 @@ describe("船舶資料篩選", () => {
   it("可用識別碼取得船舶，未知識別碼回傳 undefined", () => {
     expect(getShipById("eastern-swan")?.name).toBe("EASTERN SWAN");
     expect(getShipById("not-found")).toBeUndefined();
+  });
+
+  it("可取得未來 24 小時準備入港的船舶預報", () => {
+    const arrivals = getUpcomingArrivals(shipRecords);
+
+    expect(arrivals.map((ship) => ship.id)).toEqual(["pacific-cedar", "eastern-swan"]);
+    expect(arrivals.every((ship) => ship.status === "arriving" && ship.eta !== null)).toBe(true);
   });
 });

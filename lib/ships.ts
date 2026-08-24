@@ -174,6 +174,13 @@ export function filterShips(records: ShipRecord[], query: string, filter: ShipFi
   });
 }
 
+/** Returns the current data window's vessels scheduled to enter port within 24 hours. */
+export function getUpcomingArrivals(records: ShipRecord[]): ShipRecord[] {
+  return records
+    .filter((ship) => ship.status === "arriving" && ship.eta !== null)
+    .sort((first, second) => (first.eta ?? "").localeCompare(second.eta ?? ""));
+}
+
 export function getShipById(id: string | undefined): ShipRecord | undefined {
   return shipRecords.find((ship) => ship.id === id);
 }

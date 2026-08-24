@@ -14,17 +14,23 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
   );
 }
 
+function SpecTile({ icon, label, value }: { icon: "directions-boat" | "public" | "numbers" | "route"; label: string; value: string }) {
+  return (
+    <View style={styles.specTile}>
+      <MaterialIcons color="#137A9B" name={icon} size={18} />
+      <Text style={styles.specLabel}>{label}</Text>
+      <Text numberOfLines={1} style={styles.specValue}>{value}</Text>
+    </View>
+  );
+}
+
 function ShipDetail({ ship }: { ship: ShipRecord }) {
   const meta = SHIP_STATUS_META[ship.status];
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.topBar}>
-        <Pressable
-          accessibilityLabel="返回船舶清單"
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}
-        >
+        <Pressable accessibilityLabel="返回船舶清單" onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}>
           <MaterialIcons color="#173042" name="arrow-back" size={22} />
         </Pressable>
         <Text style={styles.topBarTitle}>船舶詳情</Text>
@@ -36,53 +42,44 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
       <Text style={styles.voyage}>航次 {ship.voyage}</Text>
 
       <View style={[styles.statusBanner, { backgroundColor: meta.softColor, borderColor: meta.borderColor }]}>
-        <View style={[styles.statusIcon, { backgroundColor: meta.color }]}>
-          <MaterialIcons color="#FFFFFF" name={meta.icon} size={18} />
-        </View>
+        <View style={[styles.statusIcon, { backgroundColor: meta.color }]}><MaterialIcons color="#FFFFFF" name={meta.icon} size={18} /></View>
         <View style={styles.statusCopy}>
           <Text style={[styles.statusLabel, { color: meta.color }]}>{meta.label}</Text>
-          <Text style={styles.statusDescription}>
-            {ship.status === "berthed"
-              ? "目前已靠泊於指定泊位"
-              : ship.status === "arriving"
-                ? "正依排程進港靠泊"
-                : "正依排程準備離港"}
-          </Text>
+          <Text style={styles.statusDescription}>{ship.status === "berthed" ? "目前已靠泊於指定泊位" : ship.status === "arriving" ? "正依排程進港靠泊" : "正依排程準備離港"}</Text>
         </View>
       </View>
 
+      <View style={styles.routeCard}>
+        <View style={styles.routeStop}><Text style={styles.routeStopLabel}>來源港</Text><Text numberOfLines={1} style={styles.routeStopValue}>{ship.originPort}</Text></View>
+        <View style={styles.routeConnector}><MaterialIcons color="#137A9B" name="arrow-forward" size={19} /><Text style={styles.routeConnectorText}>高雄港</Text></View>
+        <View style={[styles.routeStop, styles.routeStopEnd]}><Text style={styles.routeStopLabel}>下一目的地</Text><Text numberOfLines={1} style={styles.routeStopValue}>{ship.destination}</Text></View>
+      </View>
+
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>港區行程</Text>
+        <Text style={styles.sectionTitle}>入港與港區行程</Text>
         <View style={styles.infoCard}>
           <DetailRow label="目前／預定泊位" value={ship.berth} />
-          <DetailRow label="預計靠港" value={ship.eta} />
+          <DetailRow label="來源港" value={ship.originPort} />
+          <DetailRow label="預計入港" value={ship.eta} />
+          <DetailRow label="實際入港" value={ship.actualArrival} />
           <DetailRow label="預計離港" value={ship.etd} />
-          <DetailRow label="下一目的地" value={ship.destination} />
+          <DetailRow label="離港目的地" value={ship.destination} />
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>船舶資料</Text>
-        <View style={styles.infoCard}>
-          <DetailRow label="IMO" value={ship.imo} />
-          <DetailRow label="船型" value={ship.vesselType} />
-          <DetailRow label="船籍" value={ship.flag} />
-          <DetailRow label="總噸位" value={ship.grossTonnage} />
+        <Text style={styles.sectionTitle}>船舶規格</Text>
+        <View style={styles.specGrid}>
+          <SpecTile icon="numbers" label="IMO" value={ship.imo} />
+          <SpecTile icon="directions-boat" label="船型" value={ship.vesselType} />
+          <SpecTile icon="public" label="船籍" value={ship.flag} />
+          <SpecTile icon="route" label="總噸位" value={ship.grossTonnage} />
         </View>
+        <View style={styles.voyageCard}><MaterialIcons color="#506773" name="confirmation-number" size={18} /><Text style={styles.voyageCardLabel}>航次編號</Text><Text style={styles.voyageCardValue}>{ship.voyage}</Text></View>
       </View>
 
-      <View style={styles.noteCard}>
-        <MaterialIcons color="#137A9B" name="info-outline" size={20} />
-        <View style={styles.noteCopy}>
-          <Text style={styles.noteTitle}>港方作業註記</Text>
-          <Text style={styles.noteText}>{ship.note}</Text>
-        </View>
-      </View>
-
-      <View style={styles.updatedRow}>
-        <MaterialIcons color="#6C7C87" name="schedule" size={15} />
-        <Text style={styles.updatedText}>資料更新時間：{ship.lastUpdated}</Text>
-      </View>
+      <View style={styles.noteCard}><MaterialIcons color="#137A9B" name="info-outline" size={20} /><View style={styles.noteCopy}><Text style={styles.noteTitle}>港方作業註記</Text><Text style={styles.noteText}>{ship.note}</Text></View></View>
+      <View style={styles.updatedRow}><MaterialIcons color="#6C7C87" name="schedule" size={15} /><Text style={styles.updatedText}>資料更新時間：{ship.lastUpdated}</Text></View>
       <Text style={styles.disclaimer}>此畫面為示範資料，請以港方正式公告為準。</Text>
     </ScrollView>
   );
@@ -95,18 +92,7 @@ export default function ShipDetailScreen() {
   return (
     <ScreenContainer containerClassName="bg-background" edges={["top", "bottom", "left", "right"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      {ship ? (
-        <ShipDetail ship={ship} />
-      ) : (
-        <View style={styles.notFound}>
-          <MaterialIcons color="#B94545" name="directions-boat" size={32} />
-          <Text style={styles.notFoundTitle}>找不到船舶資料</Text>
-          <Text style={styles.notFoundText}>此筆資料可能已不在目前清單中。</Text>
-          <Pressable onPress={() => router.replace("/")} style={({ pressed }) => [styles.returnButton, pressed && styles.buttonPressed]}>
-            <Text style={styles.returnButtonText}>返回清單</Text>
-          </Pressable>
-        </View>
-      )}
+      {ship ? <ShipDetail ship={ship} /> : <View style={styles.notFound}><MaterialIcons color="#B94545" name="directions-boat" size={32} /><Text style={styles.notFoundTitle}>找不到船舶資料</Text><Text style={styles.notFoundText}>此筆資料可能已不在目前清單中。</Text><Pressable onPress={() => router.replace("/")} style={({ pressed }) => [styles.returnButton, pressed && styles.buttonPressed]}><Text style={styles.returnButtonText}>返回清單</Text></Pressable></View>}
     </ScreenContainer>
   );
 }
@@ -114,41 +100,12 @@ export default function ShipDetailScreen() {
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 30, paddingHorizontal: 20 },
   topBar: { alignItems: "center", flexDirection: "row", height: 46, justifyContent: "space-between", marginBottom: 12 },
-  backButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 },
-  topBarTitle: { color: "#173042", fontSize: 16, fontWeight: "800" },
-  topBarSpacer: { width: 40 },
-  eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 },
-  shipName: { color: "#173042", fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 },
-  voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
-  statusBanner: {
-    alignItems: "center",
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: "row",
-    marginTop: 22,
-    padding: 13,
-  },
-  statusIcon: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", width: 36 },
-  statusCopy: { flex: 1, marginLeft: 10 },
-  statusLabel: { fontSize: 15, fontWeight: "800", lineHeight: 20 },
-  statusDescription: { color: "#506773", fontSize: 12, lineHeight: 18, marginTop: 1 },
-  section: { marginTop: 25 },
-  sectionTitle: { color: "#173042", fontSize: 16, fontWeight: "800", marginBottom: 9 },
-  infoCard: { backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 16, borderWidth: 1, paddingHorizontal: 15 },
-  detailRow: { alignItems: "flex-start", borderBottomColor: "#E7EEF1", borderBottomWidth: 1, flexDirection: "row", minHeight: 49, paddingVertical: 12 },
-  detailLabel: { color: "#71838D", flex: 0.45, fontSize: 13, lineHeight: 19, paddingRight: 8 },
-  detailValue: { color: "#284252", flex: 0.55, fontSize: 13, fontWeight: "700", lineHeight: 19, textAlign: "right" },
-  noteCard: { alignItems: "flex-start", backgroundColor: "#EAF5F8", borderRadius: 15, flexDirection: "row", marginTop: 25, padding: 14 },
-  noteCopy: { flex: 1, marginLeft: 9 },
-  noteTitle: { color: "#176B85", fontSize: 13, fontWeight: "800", lineHeight: 18 },
-  noteText: { color: "#476775", fontSize: 13, lineHeight: 19, marginTop: 3 },
-  updatedRow: { alignItems: "center", flexDirection: "row", gap: 5, marginTop: 20 },
-  updatedText: { color: "#6C7C87", fontSize: 12, lineHeight: 18 },
-  disclaimer: { color: "#7A8991", fontSize: 11, lineHeight: 17, marginTop: 5 },
-  notFound: { alignItems: "center", flex: 1, justifyContent: "center", paddingHorizontal: 30 },
-  notFoundTitle: { color: "#173042", fontSize: 19, fontWeight: "800", marginTop: 12 },
-  notFoundText: { color: "#657984", fontSize: 14, lineHeight: 21, marginTop: 5, textAlign: "center" },
-  returnButton: { alignItems: "center", backgroundColor: "#0B4F71", borderRadius: 18, justifyContent: "center", marginTop: 18, minHeight: 40, paddingHorizontal: 16 },
-  returnButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" },
-  buttonPressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
+  backButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, topBarTitle: { color: "#173042", fontSize: 16, fontWeight: "800" }, topBarSpacer: { width: 40 },
+  eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 }, shipName: { color: "#173042", fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 }, voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
+  statusBanner: { alignItems: "center", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 22, padding: 13 }, statusIcon: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", width: 36 }, statusCopy: { flex: 1, marginLeft: 10 }, statusLabel: { fontSize: 15, fontWeight: "800", lineHeight: 20 }, statusDescription: { color: "#506773", fontSize: 12, lineHeight: 18, marginTop: 1 },
+  routeCard: { alignItems: "center", backgroundColor: "#F0F8FA", borderColor: "#D6EAF0", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 15, padding: 13 }, routeStop: { flex: 1 }, routeStopEnd: { alignItems: "flex-end" }, routeStopLabel: { color: "#637B87", fontSize: 11, lineHeight: 16 }, routeStopValue: { color: "#1F4F61", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 1 }, routeConnector: { alignItems: "center", paddingHorizontal: 8 }, routeConnectorText: { color: "#137A9B", fontSize: 10, fontWeight: "800", lineHeight: 14 },
+  section: { marginTop: 25 }, sectionTitle: { color: "#173042", fontSize: 16, fontWeight: "800", marginBottom: 9 }, infoCard: { backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 16, borderWidth: 1, paddingHorizontal: 15 }, detailRow: { alignItems: "flex-start", borderBottomColor: "#E7EEF1", borderBottomWidth: 1, flexDirection: "row", minHeight: 49, paddingVertical: 12 }, detailLabel: { color: "#71838D", flex: 0.45, fontSize: 13, lineHeight: 19, paddingRight: 8 }, detailValue: { color: "#284252", flex: 0.55, fontSize: 13, fontWeight: "700", lineHeight: 19, textAlign: "right" },
+  specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 }, specTile: { backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 14, borderWidth: 1, minHeight: 84, padding: 12, width: "48.5%" }, specLabel: { color: "#71838D", fontSize: 11, lineHeight: 16, marginTop: 6 }, specValue: { color: "#284252", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 1 }, voyageCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 14, borderWidth: 1, flexDirection: "row", marginTop: 10, minHeight: 48, paddingHorizontal: 13 }, voyageCardLabel: { color: "#71838D", fontSize: 12, marginLeft: 8 }, voyageCardValue: { color: "#284252", flex: 1, fontSize: 13, fontWeight: "800", textAlign: "right" },
+  noteCard: { alignItems: "flex-start", backgroundColor: "#EAF5F8", borderRadius: 15, flexDirection: "row", marginTop: 25, padding: 14 }, noteCopy: { flex: 1, marginLeft: 9 }, noteTitle: { color: "#176B85", fontSize: 13, fontWeight: "800", lineHeight: 18 }, noteText: { color: "#476775", fontSize: 13, lineHeight: 19, marginTop: 3 }, updatedRow: { alignItems: "center", flexDirection: "row", gap: 5, marginTop: 20 }, updatedText: { color: "#6C7C87", fontSize: 12, lineHeight: 18 }, disclaimer: { color: "#7A8991", fontSize: 11, lineHeight: 17, marginTop: 5 },
+  notFound: { alignItems: "center", flex: 1, justifyContent: "center", paddingHorizontal: 30 }, notFoundTitle: { color: "#173042", fontSize: 19, fontWeight: "800", marginTop: 12 }, notFoundText: { color: "#657984", fontSize: 14, lineHeight: 21, marginTop: 5, textAlign: "center" }, returnButton: { alignItems: "center", backgroundColor: "#0B4F71", borderRadius: 18, justifyContent: "center", marginTop: 18, minHeight: 40, paddingHorizontal: 16 }, returnButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" }, buttonPressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
 });
