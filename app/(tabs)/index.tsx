@@ -22,6 +22,11 @@ import {
   type ShipRecord,
   type ShipStatus,
 } from "@/lib/ships";
+import { reconcileFavoriteStatuses } from "@/lib/ship-favorites";
+import {
+  ensureShipNotificationPermission,
+  notifyShipStatusChange,
+} from "@/lib/ship-notifications";
 import { trpc } from "@/lib/trpc";
 
 const filterOptions: { id: ShipFilter; label: string }[] = [
@@ -120,10 +125,28 @@ export default function HomeScreen() {
     setRefreshNotice(null);
     const result = await refetch();
     const nextSnapshot = result.data;
+    if (nextSnapshot?.source !== "official") {
+      setRefreshNotice(nextSnapshot?.notice ?? "目前無法更新官方資料，顯示現有清單。");
+      return;
+    }
+
+    const changes = await reconcileFavoriteStatuses(nextSnapshot.ships);
+    if (changes.length === 0) {
+      setRefreshNotice("已取得高雄港官方最新資料；收藏船舶沒有靠離港變更。");
+      return;
+    }
+
+    const notificationsGranted = await ensureShipNotificationPermission();
+    if (notificationsGranted) {
+      await Promise.all(changes.map((change) => notifyShipStatusChange(change)));
+    }
+
+    const changedNames = changes.slice(0, 2).map((change) => `${change.ship.name}${change.label}`).join("、");
+    const remaining = changes.length > 2 ? ` 等 ${changes.length} 艘` : "";
     setRefreshNotice(
-      nextSnapshot?.source === "official"
-        ? "已取得高雄港官方最新資料。"
-        : nextSnapshot?.notice ?? "目前無法更新官方資料，顯示現有清單。",
+      notificationsGranted
+        ? `已更新資料並通知：${changedNames}${remaining}。`
+        : `已更新資料：${changedNames}${remaining}。請允許通知權限以接收系統提醒。`,
     );
   }, [refetch]);
 

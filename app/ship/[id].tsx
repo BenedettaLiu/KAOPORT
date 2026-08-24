@@ -1,8 +1,10 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { ScrollView, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { isShipFavorite, toggleShipFavorite } from "@/lib/ship-favorites";
 import { getShipById, SHIP_STATUS_META, type ShipRecord } from "@/lib/ships";
 
 function DetailRow({ label, value }: { label: string; value: string | null }) {
@@ -16,6 +18,16 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 
 function ShipDetail({ ship }: { ship: ShipRecord }) {
   const meta = SHIP_STATUS_META[ship.status];
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    isShipFavorite(ship.id).then(setIsFavorite).catch(() => setIsFavorite(false));
+  }, [ship.id]);
+
+  const handleFavoriteToggle = async () => {
+    const nextValue = await toggleShipFavorite(ship);
+    setIsFavorite(nextValue);
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -28,7 +40,17 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
           <MaterialIcons color="#173042" name="arrow-back" size={22} />
         </Pressable>
         <Text style={styles.topBarTitle}>船舶詳情</Text>
-        <View style={styles.topBarSpacer} />
+        <Pressable
+          accessibilityLabel={isFavorite ? "取消收藏此船舶" : "收藏此船舶"}
+          onPress={handleFavoriteToggle}
+          style={({ pressed }) => [styles.favoriteButton, pressed && styles.buttonPressed]}
+        >
+          <MaterialIcons
+            color={isFavorite ? "#0B4F71" : "#173042"}
+            name={isFavorite ? "bookmark" : "bookmark-border"}
+            size={22}
+          />
+        </Pressable>
       </View>
 
       <Text style={styles.eyebrow}>VESSEL INFORMATION</Text>
@@ -50,6 +72,13 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
           </Text>
         </View>
       </View>
+
+      {isFavorite ? (
+        <View style={styles.favoriteHint}>
+          <MaterialIcons color="#176B85" name="notifications-active" size={18} />
+          <Text style={styles.favoriteHintText}>下拉更新清單時，靠港或離港的狀態變更會通知您。</Text>
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>港區行程</Text>
@@ -83,7 +112,7 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
         <MaterialIcons color="#6C7C87" name="schedule" size={15} />
         <Text style={styles.updatedText}>資料更新時間：{ship.lastUpdated}</Text>
       </View>
-      <Text style={styles.disclaimer}>此畫面為示範資料，請以港方正式公告為準。</Text>
+      <Text style={styles.disclaimer}>船舶資料來自官方開放資料，實際動態請以港方最新公告為準。</Text>
     </ScrollView>
   );
 }
@@ -116,22 +145,17 @@ const styles = StyleSheet.create({
   topBar: { alignItems: "center", flexDirection: "row", height: 46, justifyContent: "space-between", marginBottom: 12 },
   backButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 },
   topBarTitle: { color: "#173042", fontSize: 16, fontWeight: "800" },
-  topBarSpacer: { width: 40 },
+  favoriteButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 },
   eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 },
   shipName: { color: "#173042", fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 },
   voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
-  statusBanner: {
-    alignItems: "center",
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: "row",
-    marginTop: 22,
-    padding: 13,
-  },
+  statusBanner: { alignItems: "center", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 22, padding: 13 },
   statusIcon: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", width: 36 },
   statusCopy: { flex: 1, marginLeft: 10 },
   statusLabel: { fontSize: 15, fontWeight: "800", lineHeight: 20 },
   statusDescription: { color: "#506773", fontSize: 12, lineHeight: 18, marginTop: 1 },
+  favoriteHint: { alignItems: "center", backgroundColor: "#EAF5F8", borderRadius: 12, flexDirection: "row", gap: 7, marginTop: 12, padding: 10 },
+  favoriteHintText: { color: "#476775", flex: 1, fontSize: 12, lineHeight: 18 },
   section: { marginTop: 25 },
   sectionTitle: { color: "#173042", fontSize: 16, fontWeight: "800", marginBottom: 9 },
   infoCard: { backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 16, borderWidth: 1, paddingHorizontal: 15 },

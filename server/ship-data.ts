@@ -42,10 +42,10 @@ function formatOfficialTimestamp(value: string): string | null {
   return `${rawMonth.padStart(2, "0")}/${rawDay.padStart(2, "0")} ${String(hour).padStart(2, "0")}:${minute}`;
 }
 
-function toStableId(ship: OpenDataShip, direction: ShipStatus, index: number): string {
-  const raw = [direction, ship.VISA_NO, ship.VESSEL_NO, ship.WHARF_CODE, ship.IMO, index]
-    .filter(Boolean)
-    .join("-");
+function toStableId(ship: OpenDataShip, index: number): string {
+  const raw = ship.IMO
+    ? `imo-${ship.IMO}-${ship.VISA_NO || ship.VESSEL_NO}`
+    : `visa-${ship.VISA_NO || ship.VESSEL_NO || index}`;
   return raw.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
 }
 
@@ -61,7 +61,7 @@ function toShipRecord(ship: OpenDataShip, direction: "arrival" | "departure", in
         : "官方最近 24 小時進港資料，靠泊狀態依資料更新為準。";
 
   return {
-    id: toStableId(ship, status, index),
+    id: toStableId(ship, index),
     name: vesselName,
     voyage: ship.VISA_NO || ship.VESSEL_NO || "尚未提供",
     imo: ship.IMO || "尚未提供",
