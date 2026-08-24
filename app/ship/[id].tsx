@@ -99,8 +99,10 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
         <View style={styles.infoCard}>
           <DetailRow label="官方進出港" value={ship.entryExitStatus ?? SHIP_STATUS_META[ship.status].label} />
           <DetailRow label="作業目的" value={ship.operationPurpose ?? "尚未提供"} />
-          <DetailRow label="港代理／引水相關申請" value={ship.pilotApplicationName ?? "尚未提供"} />
-          <DetailRow label="申請編號" value={ship.pilotApplicationNumber ?? "尚未提供"} />
+          <DetailRow label="引水申請時間" value={formatShipTime(ship.signalTime ?? null)} />
+          <DetailRow label="引水出發時間" value={formatShipTime(ship.departureTime ?? null)} />
+          <DetailRow label="港代理名稱" value={ship.pilotApplicationName ?? "尚未提供"} />
+          <DetailRow label="代理編號" value={ship.pilotApplicationNumber ?? "尚未提供"} />
         </View>
       </View>
 
@@ -127,7 +129,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 30, paddingHorizontal: 20 },
   topBar: { alignItems: "center", flexDirection: "row", height: 46, justifyContent: "space-between", marginBottom: 12 },
   backButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, favoriteButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, topBarTitle: { color: "#173042", fontSize: 16, fontWeight: "800" },
-  eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 }, shipName: { color: "#173042", fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 }, chineseShipName: { color: "#52717D", fontSize: 14, fontWeight: "700", lineHeight: 20, marginTop: 2 }, voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
+  eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 }, shipName: { color: "#173042", flexShrink: 1, fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 }, chineseShipName: { color: "#52717D", flexShrink: 1, fontSize: 14, fontWeight: "700", lineHeight: 21, marginTop: 3 }, voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
   statusBanner: { alignItems: "center", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 22, padding: 13 }, statusIcon: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", width: 36 }, statusCopy: { flex: 1, marginLeft: 10 }, statusLabel: { fontSize: 15, fontWeight: "800", lineHeight: 20 }, statusDescription: { color: "#506773", fontSize: 12, lineHeight: 18, marginTop: 1 },
   routeCard: { alignItems: "center", backgroundColor: "#F0F8FA", borderColor: "#D6EAF0", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 15, padding: 13 }, routeStop: { flex: 1 }, routeStopEnd: { alignItems: "flex-end" }, routeStopLabel: { color: "#637B87", fontSize: 11, lineHeight: 16 }, routeStopValue: { color: "#1F4F61", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 1 }, routeConnector: { alignItems: "center", paddingHorizontal: 8 }, routeConnectorText: { color: "#137A9B", fontSize: 10, fontWeight: "800", lineHeight: 14 },
   section: { marginTop: 25 }, sectionTitle: { color: "#173042", fontSize: 16, fontWeight: "800", marginBottom: 9 }, infoCard: { backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 16, borderWidth: 1, paddingHorizontal: 15 }, detailRow: { alignItems: "flex-start", borderBottomColor: "#E7EEF1", borderBottomWidth: 1, flexDirection: "row", minHeight: 49, paddingVertical: 12 }, detailLabel: { color: "#71838D", flex: 0.45, fontSize: 13, lineHeight: 19, paddingRight: 8 }, detailValue: { color: "#284252", flex: 0.55, fontSize: 13, fontWeight: "700", lineHeight: 19, textAlign: "right" },
