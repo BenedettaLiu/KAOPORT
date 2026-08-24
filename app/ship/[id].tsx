@@ -52,6 +52,7 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
 
       <Text style={styles.eyebrow}>VESSEL INFORMATION</Text>
       <Text style={styles.shipName}>{ship.name}</Text>
+      {ship.chineseName ? <Text style={styles.chineseShipName}>中文船名：{ship.chineseName}</Text> : null}
       <Text style={styles.voyage}>航次 {ship.voyage}</Text>
 
       <View style={[styles.statusBanner, { backgroundColor: meta.softColor, borderColor: meta.borderColor }]}>
@@ -76,6 +77,8 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
           <DetailRow label="預計入港" value={formatShipTime(ship.eta)} />
           <DetailRow label="實際入港" value={formatShipTime(ship.actualArrival)} />
           <DetailRow label="預計離港" value={formatShipTime(ship.etd)} />
+          <DetailRow label="出發／離泊時間" value={formatShipTime(ship.departureTime ?? null)} />
+          <DetailRow label="過信號台時間" value={formatShipTime(ship.signalTime ?? null)} />
           <DetailRow label="離港目的地" value={ship.destination} />
         </View>
       </View>
@@ -89,6 +92,16 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
           <SpecTile icon="route" label="總噸位" value={ship.grossTonnage} />
         </View>
         <View style={styles.voyageCard}><MaterialIcons color="#506773" name="confirmation-number" size={18} /><Text style={styles.voyageCardLabel}>航次編號</Text><Text style={styles.voyageCardValue}>{ship.voyage}</Text></View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>官方申請與作業資訊</Text>
+        <View style={styles.infoCard}>
+          <DetailRow label="官方進出港" value={ship.entryExitStatus ?? SHIP_STATUS_META[ship.status].label} />
+          <DetailRow label="作業目的" value={ship.operationPurpose ?? "尚未提供"} />
+          <DetailRow label="港代理／引水相關申請" value={ship.pilotApplicationName ?? "尚未提供"} />
+          <DetailRow label="申請編號" value={ship.pilotApplicationNumber ?? "尚未提供"} />
+        </View>
       </View>
 
       <View style={styles.noteCard}><MaterialIcons color="#137A9B" name="info-outline" size={20} /><View style={styles.noteCopy}><Text style={styles.noteTitle}>港方作業註記</Text><Text style={styles.noteText}>{ship.note}</Text></View></View>
@@ -114,7 +127,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 30, paddingHorizontal: 20 },
   topBar: { alignItems: "center", flexDirection: "row", height: 46, justifyContent: "space-between", marginBottom: 12 },
   backButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, favoriteButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, topBarTitle: { color: "#173042", fontSize: 16, fontWeight: "800" },
-  eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 }, shipName: { color: "#173042", fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 }, voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
+  eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 }, shipName: { color: "#173042", fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 }, chineseShipName: { color: "#52717D", fontSize: 14, fontWeight: "700", lineHeight: 20, marginTop: 2 }, voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
   statusBanner: { alignItems: "center", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 22, padding: 13 }, statusIcon: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", width: 36 }, statusCopy: { flex: 1, marginLeft: 10 }, statusLabel: { fontSize: 15, fontWeight: "800", lineHeight: 20 }, statusDescription: { color: "#506773", fontSize: 12, lineHeight: 18, marginTop: 1 },
   routeCard: { alignItems: "center", backgroundColor: "#F0F8FA", borderColor: "#D6EAF0", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 15, padding: 13 }, routeStop: { flex: 1 }, routeStopEnd: { alignItems: "flex-end" }, routeStopLabel: { color: "#637B87", fontSize: 11, lineHeight: 16 }, routeStopValue: { color: "#1F4F61", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 1 }, routeConnector: { alignItems: "center", paddingHorizontal: 8 }, routeConnectorText: { color: "#137A9B", fontSize: 10, fontWeight: "800", lineHeight: 14 },
   section: { marginTop: 25 }, sectionTitle: { color: "#173042", fontSize: 16, fontWeight: "800", marginBottom: 9 }, infoCard: { backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 16, borderWidth: 1, paddingHorizontal: 15 }, detailRow: { alignItems: "flex-start", borderBottomColor: "#E7EEF1", borderBottomWidth: 1, flexDirection: "row", minHeight: 49, paddingVertical: 12 }, detailLabel: { color: "#71838D", flex: 0.45, fontSize: 13, lineHeight: 19, paddingRight: 8 }, detailValue: { color: "#284252", flex: 0.55, fontSize: 13, fontWeight: "700", lineHeight: 19, textAlign: "right" },

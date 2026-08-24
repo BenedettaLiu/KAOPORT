@@ -21,7 +21,7 @@ let inFlightRefresh: Promise<OfficialShipSnapshot> | null = null;
 
 type OfficialShip = Record<string, string>;
 
-const SHIP_FIELDS = ["VISA_NO", "VESSEL_NO", "VESSEL_CNAME", "VESSEL_ENAME", "WHARF_CODE", "WHARF_NAME", "ETA_DT", "ETD_DT", "LEAVE_DT", "ACT_PORT_DT", "SHIP_TYPE", "SHIP_TYPE_NAME", "BEFORE_PORT", "NEXT_PORT", "IMO"];
+const SHIP_FIELDS = ["VISA_NO", "STATUS", "VESSEL_NO", "VESSEL_CNAME", "VESSEL_ENAME", "WHARF_CODE", "WHARF_NAME", "SIGNAL_DT", "ETA_DT", "ETD_DT", "LEAVE_DT", "ACT_PORT_DT", "SHIP_TYPE", "SHIP_TYPE_NAME", "GOAL_ARRIVAL", "PBG_NO", "PBG_NAME", "BEFORE_PORT", "NEXT_PORT", "IMO"];
 
 function decodeValue(value: string): string {
   return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
@@ -52,14 +52,20 @@ function toShipRecord(ship: OfficialShip, status: ShipStatus, index: number): Sh
   const eta = parseOfficialTimestamp(ship.ETA_DT);
   const etd = parseOfficialTimestamp(ship.ETD_DT);
   const actualArrival = parseOfficialTimestamp(ship.ACT_PORT_DT);
+  const signalTime = parseOfficialTimestamp(ship.SIGNAL_DT);
   const departureTime = parseOfficialTimestamp(ship.LEAVE_DT);
   return {
     id: toStableId(ship, index), name: ship.VESSEL_ENAME || ship.VESSEL_CNAME || `未命名船舶 ${index + 1}`,
+    chineseName: ship.VESSEL_CNAME || undefined,
     voyage: ship.VISA_NO || ship.VESSEL_NO || "尚未提供", imo: ship.IMO || "尚未提供",
     vesselType: ship.SHIP_TYPE_NAME || ship.SHIP_TYPE || "尚未提供", flag: "尚未提供", status,
-    berth: ship.WHARF_NAME || ship.WHARF_CODE || "尚未提供", eta, etd, actualArrival,
+    berth: ship.WHARF_NAME || ship.WHARF_CODE || "尚未提供", eta, etd, actualArrival, departureTime, signalTime,
     originPort: ship.BEFORE_PORT || "尚未提供", lastUpdated: departureTime || actualArrival || eta || new Date().toISOString(),
     destination: ship.NEXT_PORT || "尚未提供", grossTonnage: "尚未提供",
+    entryExitStatus: ship.STATUS || undefined,
+    operationPurpose: ship.GOAL_ARRIVAL || undefined,
+    pilotApplicationName: ship.PBG_NAME || undefined,
+    pilotApplicationNumber: ship.PBG_NO || undefined,
     note: status === "arriving" ? "依高雄港官方進港預報資料顯示。" : status === "berthed" ? "依高雄港官方最近 24 小時實際進港資料顯示。" : "依高雄港官方最近 24 小時實際出港資料顯示。",
   };
 }

@@ -11,7 +11,9 @@ describe("船舶資料篩選", () => {
   });
 
   it("可由船名、航次、IMO、泊位或來源港搜尋", () => {
+    const recordsWithChineseName = shipRecords.map((ship) => ship.id === "harbor-aurora" ? { ...ship, chineseName: "港灣曙光" } : ship);
     expect(filterShips(shipRecords, "aurora", "all").map((ship) => ship.id)).toEqual(["harbor-aurora"]);
+    expect(filterShips(recordsWithChineseName, "港灣曙光", "all").map((ship) => ship.id)).toEqual(["harbor-aurora"]);
     expect(filterShips(shipRecords, "PC-381W", "all").map((ship) => ship.id)).toEqual(["pacific-cedar"]);
     expect(filterShips(shipRecords, "9712534", "all").map((ship) => ship.id)).toEqual(["formosa-pioneer"]);
     expect(filterShips(shipRecords, "蓬萊商港區", "all").map((ship) => ship.id)).toEqual(["meridian-trader"]);
@@ -54,5 +56,6 @@ describe("船舶資料篩選", () => {
     expect(filterUpcomingArrivals(records, "#77碼頭", "all", now).map((ship) => ship.id)).toEqual(["pacific-cedar"]);
     expect(filterUpcomingArrivals(records, "all", "散裝貨輪", now).map((ship) => ship.id)).toEqual(["eastern-swan"]);
     expect(filterUpcomingArrivals(records, "all", "all", { name: "PACIFIC", originPort: "台中" }, now).map((ship) => ship.id)).toEqual(["pacific-cedar"]);
+    expect(filterUpcomingArrivals([{ ...records[0], chineseName: "太平洋雪松" }, records[1]], "all", "all", { name: "太平洋", originPort: "台中" }, now).map((ship) => ship.id)).toEqual(["pacific-cedar"]);
   });
 });
