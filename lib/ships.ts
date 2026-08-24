@@ -143,12 +143,6 @@ export const shipRecords: ShipRecord[] = [
   },
 ];
 
-let activeShipRecords: ShipRecord[] = shipRecords;
-
-export function setActiveShipRecords(records: ShipRecord[]): void {
-  activeShipRecords = records;
-}
-
 export type ShipFilter = "all" | ShipStatus;
 
 export function filterShips(records: ShipRecord[], query: string, filter: ShipFilter): ShipRecord[] {
@@ -167,5 +161,5 @@ export function filterShips(records: ShipRecord[], query: string, filter: ShipFi
 }
 
 export function getShipById(id: string | undefined): ShipRecord | undefined {
-  return activeShipRecords.find((ship) => ship.id === id);
+  return shipRecords.find((ship) => ship.id === id);
 }
