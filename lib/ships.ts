@@ -11,6 +11,8 @@ export type ShipRecord = {
   berth: string;
   eta: string | null;
   etd: string | null;
+  actualArrival: string | null;
+  originPort: string;
   lastUpdated: string;
   destination: string;
   grossTonnage: string;
@@ -56,6 +58,8 @@ export const shipRecords: ShipRecord[] = [
     berth: "第六貨櫃中心 108 號",
     eta: "08/24 05:40",
     etd: "08/24 22:30",
+    actualArrival: "08/24 06:05",
+    originPort: "基隆港",
     lastUpdated: "08/24 09:15",
     destination: "新加坡",
     grossTonnage: "68,210 GT",
@@ -72,6 +76,8 @@ export const shipRecords: ShipRecord[] = [
     berth: "中島商港區 37 號",
     eta: "08/24 11:20",
     etd: "08/25 08:00",
+    actualArrival: null,
+    originPort: "台中港",
     lastUpdated: "08/24 09:10",
     destination: "高雄港",
     grossTonnage: "41,780 GT",
@@ -88,6 +94,8 @@ export const shipRecords: ShipRecord[] = [
     berth: "第五貨櫃中心 79 號",
     eta: "08/23 20:30",
     etd: "08/24 13:10",
+    actualArrival: "08/23 20:48",
+    originPort: "新加坡港",
     lastUpdated: "08/24 09:06",
     destination: "香港",
     grossTonnage: "92,150 GT",
@@ -104,6 +112,8 @@ export const shipRecords: ShipRecord[] = [
     berth: "大林商港區 23 號",
     eta: "08/24 00:50",
     etd: "08/25 03:30",
+    actualArrival: "08/24 01:12",
+    originPort: "釜山港",
     lastUpdated: "08/24 08:58",
     destination: "釜山",
     grossTonnage: "57,990 GT",
@@ -120,6 +130,8 @@ export const shipRecords: ShipRecord[] = [
     berth: "第一港口 9 號",
     eta: "08/24 15:45",
     etd: "08/25 01:20",
+    actualArrival: null,
+    originPort: "橫濱港",
     lastUpdated: "08/24 08:45",
     destination: "高雄港",
     grossTonnage: "59,870 GT",
@@ -136,6 +148,8 @@ export const shipRecords: ShipRecord[] = [
     berth: "蓬萊商港區 18 號",
     eta: "08/22 18:20",
     etd: "08/24 17:40",
+    actualArrival: "08/22 18:42",
+    originPort: "馬尼拉港",
     lastUpdated: "08/24 08:36",
     destination: "馬尼拉",
     grossTonnage: "22,480 GT",
@@ -152,7 +166,7 @@ export function filterShips(records: ShipRecord[], query: string, filter: ShipFi
     const matchesFilter = filter === "all" || ship.status === filter;
     const matchesQuery =
       normalizedQuery.length === 0 ||
-      [ship.name, ship.voyage, ship.imo, ship.berth].some((value) =>
+      [ship.name, ship.voyage, ship.imo, ship.berth, ship.originPort].some((value) =>
         value.toLocaleLowerCase().includes(normalizedQuery),
       );
 

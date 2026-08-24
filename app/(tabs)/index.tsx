@@ -46,6 +46,9 @@ function StatusChip({ status }: { status: ShipStatus }) {
 
 function ShipCard({ ship }: { ship: ShipRecord }) {
   const meta = SHIP_STATUS_META[ship.status];
+  const hasArrived = ship.actualArrival !== null;
+  const arrivalLabel = hasArrived ? "實際入港" : "預計入港";
+  const arrivalTime = ship.actualArrival ?? ship.eta ?? "尚未提供";
 
   return (
     <Pressable
@@ -66,6 +69,16 @@ function ShipCard({ ship }: { ship: ShipRecord }) {
 
       <View style={styles.divider} />
 
+      <View style={styles.arrivalStrip}>
+        <View style={styles.arrivalIcon}>
+          <MaterialIcons color="#137A9B" name="south" size={17} />
+        </View>
+        <View style={styles.arrivalCopy}>
+          <Text style={styles.arrivalLabel}>入港資訊 · {arrivalLabel}</Text>
+          <Text style={styles.arrivalValue}>{arrivalTime} · 來源港 {ship.originPort}</Text>
+        </View>
+      </View>
+
       <View style={styles.detailsRow}>
         <View style={styles.detailCell}>
           <Text style={styles.detailLabel}>泊位</Text>
@@ -74,7 +87,7 @@ function ShipCard({ ship }: { ship: ShipRecord }) {
           </Text>
         </View>
         <View style={styles.detailCell}>
-          <Text style={styles.detailLabel}>{ship.status === "departing" ? "預計離港" : "預計靠港"}</Text>
+          <Text style={styles.detailLabel}>{ship.status === "departing" ? "預計離港" : "入港狀態"}</Text>
           <Text style={styles.detailValue}>{ship.status === "departing" ? ship.etd : ship.eta}</Text>
         </View>
         <MaterialIcons color="#6C7C87" name="chevron-right" size={23} />
@@ -319,6 +332,11 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 12, fontWeight: "800" },
   divider: { backgroundColor: "#E8EEF1", height: 1, marginVertical: 12 },
+  arrivalStrip: { alignItems: "center", backgroundColor: "#F0F8FA", borderRadius: 10, flexDirection: "row", marginBottom: 11, paddingHorizontal: 9, paddingVertical: 8 },
+  arrivalIcon: { alignItems: "center", backgroundColor: "#DDF0F5", borderRadius: 12, height: 24, justifyContent: "center", width: 24 },
+  arrivalCopy: { flex: 1, marginLeft: 7 },
+  arrivalLabel: { color: "#536F7B", fontSize: 11, lineHeight: 15 },
+  arrivalValue: { color: "#1F4F61", fontSize: 12, fontWeight: "800", lineHeight: 18 },
   detailsRow: { alignItems: "center", flexDirection: "row" },
   detailCell: { flex: 1, paddingRight: 8 },
   detailLabel: { color: "#71838D", fontSize: 11, lineHeight: 16 },
