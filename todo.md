@@ -107,3 +107,6 @@
 - [x] 將收藏清單匯出為 CSV 與 TXT 備份檔
 - [x] 串接原生檔案選取與備份分享流程
 - [x] 驗證收藏匯入匯出、分組、篩選與清理行為
+- [ ] 同步最新版收藏管理功能至 GitHub Android 建置分支
+- [ ] 觸發並追蹤 GitHub Actions Android APK 建置
+- [ ] 提供成功 APK 的 GitHub 下載位置
