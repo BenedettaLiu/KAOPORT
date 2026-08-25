@@ -4,6 +4,9 @@ export type ShipRecord = {
   id: string;
   name: string;
   chineseName?: string;
+  mmsi?: string;
+  callSign?: string;
+  overallLength?: string;
   voyage: string;
   imo: string;
   vesselType: string;

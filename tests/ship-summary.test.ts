@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildVisaSummaryText } from "../lib/ship-summary";
+import { buildShipSpecificationsText, buildVisaSummaryText } from "../lib/ship-summary";
 import { shipRecords } from "../lib/ships";
 
 describe("簽證船舶摘要", () => {
@@ -19,5 +19,18 @@ describe("簽證船舶摘要", () => {
     expect(summary).toContain("引水申請時間：08/24 10:15");
     expect(summary).toContain("引水出發時間：08/24 10:30");
     expect(summary).toContain("港代理名稱：高雄港代理服務股份有限公司");
+  });
+});
+
+describe("船舶規格摘要", () => {
+  it("包含可用的呼號及沒有官方資料時的 MMSI、船總長度標記", () => {
+    const summary = buildShipSpecificationsText({
+      ...shipRecords[0],
+      callSign: "BXYZ",
+    });
+
+    expect(summary).toContain("呼號：BXYZ");
+    expect(summary).toContain("MMSI：尚未提供");
+    expect(summary).toContain("船總長度：尚未提供");
   });
 });

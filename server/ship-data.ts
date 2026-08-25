@@ -21,7 +21,7 @@ let inFlightRefresh: Promise<OfficialShipSnapshot> | null = null;
 
 type OfficialShip = Record<string, string>;
 
-const SHIP_FIELDS = ["VISA_NO", "STATUS", "VESSEL_NO", "VESSEL_CNAME", "VESSEL_ENAME", "WHARF_CODE", "WHARF_NAME", "SIGNAL_DT", "ETA_DT", "ETD_DT", "LEAVE_DT", "ACT_PORT_DT", "SHIP_TYPE", "SHIP_TYPE_NAME", "GOAL_ARRIVAL", "PBG_NO", "PBG_NAME", "BEFORE_PORT", "NEXT_PORT", "IMO"];
+const SHIP_FIELDS = ["VISA_NO", "STATUS", "VESSEL_NO", "VESSEL_CNAME", "VESSEL_ENAME", "WHARF_CODE", "WHARF_NAME", "SIGNAL_DT", "ETA_DT", "ETD_DT", "LEAVE_DT", "ACT_PORT_DT", "SHIP_TYPE", "SHIP_TYPE_NAME", "GOAL_ARRIVAL", "PBG_NO", "PBG_NAME", "BEFORE_PORT", "NEXT_PORT", "IMO", "CALL_SIGN"];
 
 function decodeValue(value: string): string {
   return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
@@ -57,6 +57,7 @@ function toShipRecord(ship: OfficialShip, status: ShipStatus, index: number): Sh
   return {
     id: toStableId(ship, index), name: ship.VESSEL_ENAME || ship.VESSEL_CNAME || `未命名船舶 ${index + 1}`,
     chineseName: ship.VESSEL_CNAME || undefined,
+    callSign: ship.CALL_SIGN || undefined,
     voyage: ship.VISA_NO || ship.VESSEL_NO || "尚未提供", imo: ship.IMO || "尚未提供",
     vesselType: ship.SHIP_TYPE_NAME || ship.SHIP_TYPE || "尚未提供", flag: "尚未提供", status,
     berth: ship.WHARF_NAME || ship.WHARF_CODE || "尚未提供", eta, etd, actualArrival, departureTime, signalTime,

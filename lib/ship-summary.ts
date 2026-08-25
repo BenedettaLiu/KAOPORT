@@ -18,3 +18,21 @@ export function buildVisaSummaryText(ship: ShipRecord): string {
 
   return lines.filter((line): line is string => Boolean(line)).join("\n");
 }
+
+/** Creates the plain-text payload used by the vessel specifications copy action. */
+export function buildShipSpecificationsText(ship: ShipRecord): string {
+  const lines = [
+    "高雄港船舶規格摘要",
+    `英文船名：${ship.name}`,
+    `中文船名：${ship.chineseName ?? "尚未提供"}`,
+    `IMO：${ship.imo}`,
+    `MMSI：${ship.mmsi ?? "尚未提供"}`,
+    `呼號：${ship.callSign ?? "尚未提供"}`,
+    `船型：${ship.vesselType}`,
+    `船籍：${ship.flag}`,
+    `船總長度：${ship.overallLength ?? "尚未提供"}`,
+    `總噸位：${ship.grossTonnage}`,
+  ];
+
+  return lines.join("\n");
+}
