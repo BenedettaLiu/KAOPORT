@@ -58,6 +58,7 @@ function toShipRecord(ship: OfficialShip, status: ShipStatus, index: number): Sh
     id: toStableId(ship, index), name: ship.VESSEL_ENAME || ship.VESSEL_CNAME || `未命名船舶 ${index + 1}`,
     chineseName: ship.VESSEL_CNAME || undefined,
     callSign: ship.CALL_SIGN || undefined,
+    vesselNumber: ship.VESSEL_NO || undefined,
     voyage: ship.VISA_NO || ship.VESSEL_NO || "尚未提供", imo: ship.IMO || "尚未提供",
     vesselType: ship.SHIP_TYPE_NAME || ship.SHIP_TYPE || "尚未提供", flag: "尚未提供", status,
     berth: ship.WHARF_NAME || ship.WHARF_CODE || "尚未提供", eta, etd, actualArrival, departureTime, signalTime,

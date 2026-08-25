@@ -28,6 +28,7 @@ export function buildShipSpecificationsText(ship: ShipRecord): string {
     `IMO：${ship.imo}`,
     `MMSI：${ship.mmsi ?? "尚未提供"}`,
     `呼號：${ship.callSign ?? "尚未提供"}`,
+    `官方船舶編號：${ship.vesselNumber ?? "尚未提供"}`,
     `船型：${ship.vesselType}`,
     `船籍：${ship.flag}`,
     `船總長度：${ship.overallLength ?? "尚未提供"}`,

@@ -6,6 +6,7 @@ export type ShipRecord = {
   chineseName?: string;
   mmsi?: string;
   callSign?: string;
+  vesselNumber?: string;
   overallLength?: string;
   voyage: string;
   imo: string;

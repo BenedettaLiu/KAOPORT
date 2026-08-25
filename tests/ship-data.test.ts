@@ -8,6 +8,6 @@ describe("高雄港官方 XML 船期轉換", () => {
     expect(parseOfficialTimestamp("8/24/2026 2:30:00 PM")).toBe("2026-08-24T14:30:00+08:00");
   });
   it("可將進港預報 XML 轉換為標準船舶紀錄", () => {
-    expect(parseOfficialShipXml(sampleXml, "arriving")[0]).toMatchObject({ id: "imo-1047108", name: "MAERSK NOTODDEN", chineseName: "麥司克諾托登", callSign: "9V1234", entryExitStatus: "進港", berth: "#77 碼頭", vesselType: "貨櫃輪", eta: "2026-08-24T14:30:00+08:00", signalTime: "2026-08-24T13:20:00+08:00", departureTime: "2026-08-24T13:05:00+08:00", operationPurpose: "A1 裝卸貨", pilotApplicationNumber: "Z05530", pilotApplicationName: "台灣快桅股份有限公司高雄分公司", originPort: "CNNSA Nansha", destination: "KRPUS Busan" });
+    expect(parseOfficialShipXml(sampleXml, "arriving")[0]).toMatchObject({ id: "imo-1047108", name: "MAERSK NOTODDEN", chineseName: "麥司克諾托登", callSign: "9V1234", vesselNumber: "V25425", entryExitStatus: "進港", berth: "#77 碼頭", vesselType: "貨櫃輪", eta: "2026-08-24T14:30:00+08:00", signalTime: "2026-08-24T13:20:00+08:00", departureTime: "2026-08-24T13:05:00+08:00", operationPurpose: "A1 裝卸貨", pilotApplicationNumber: "Z05530", pilotApplicationName: "台灣快桅股份有限公司高雄分公司", originPort: "CNNSA Nansha", destination: "KRPUS Busan" });
   });
 });
