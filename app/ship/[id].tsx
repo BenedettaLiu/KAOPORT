@@ -5,14 +5,14 @@ import * as MediaLibrary from "expo-media-library";
 import { useFocusEffect } from "@react-navigation/native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, AppState, FlatList, Modal, Platform, ScrollView, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Alert, AppState, FlatList, Modal, Platform, ScrollView, Pressable, Share, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { captureRef } from "react-native-view-shot";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { AIS_TRACKING_LAYOUT, DASHBOARD_SUMMARY_LAYOUT } from "@/lib/ship-detail-layout";
 import { getFavoriteRecords, subscribeFavoriteChanges, toggleShipFavorite } from "@/lib/ship-favorites";
 import { getOfficialAisTrackingTarget, OFFICIAL_LATEST_MOVEMENT_URL, OFFICIAL_LATEST_SCHEDULE_URL } from "@/lib/official-dashboards";
-import { buildShipSpecificationsText, formatCopyableShipField } from "@/lib/ship-summary";
+import { buildShipSpecificationsShareText, buildShipSpecificationsText, formatCopyableShipField } from "@/lib/ship-summary";
 import { formatShipTime, getShipById, setActiveShipRecords, SHIP_STATUS_META, type ShipRecord } from "@/lib/ships";
 import { trpc } from "@/lib/trpc";
 
@@ -28,15 +28,10 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-function SpecTile({ icon, label, onPress, value }: { icon: ComponentProps<typeof MaterialIcons>["name"]; label: string; onPress: () => void; value: string }) {
-  return (
-    <Pressable accessibilityHint="複製此欄位資訊" accessibilityLabel={`複製${label}：${value}`} onPress={onPress} style={({ pressed }) => [styles.specTile, pressed && styles.specTilePressed]}>
-      <MaterialIcons color="#137A9B" name={icon} size={18} />
-      <Text style={styles.specLabel}>{label}</Text>
-      <Text numberOfLines={2} style={styles.specValue}>{value}</Text>
-      <View style={styles.specTileCopyHint}><MaterialIcons color="#5D8797" name="content-copy" size={12} /><Text style={styles.specTileCopyHintText}>點按複製</Text></View>
-    </Pressable>
-  );
+function SpecTile({ icon, label, onPress, value }: { icon: ComponentProps<typeof MaterialIcons>["name"]; label: string; onPress?: () => void; value: string }) {
+  const content = <><MaterialIcons color="#137A9B" name={icon} size={18} /><Text style={styles.specLabel}>{label}</Text><Text numberOfLines={2} style={styles.specValue}>{value}</Text>{onPress ? <View accessibilityElementsHidden style={[styles.specTileCopyHint, styles.specTileCopyHintSpacious]}><MaterialIcons color="#5D8797" name="content-copy" size={13} /></View> : null}</>;
+  if (!onPress) return <View style={[styles.specTile, styles.specTileSpacious]}>{content}</View>;
+  return <Pressable accessibilityHint="複製此欄位資訊" accessibilityLabel={`複製${label}：${value}`} onPress={onPress} style={({ pressed }) => [styles.specTile, styles.specTileSpacious, pressed && styles.specTilePressed]}>{content}</Pressable>;
 }
 
 async function openOfficialDashboard(url: string, label: string): Promise<void> {
@@ -59,7 +54,6 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
   const [specActionNotice, setSpecActionNotice] = useState<string | null>(null);
   const [isOpeningAis, setIsOpeningAis] = useState(false);
   const [aisCountdown, setAisCountdown] = useState<number | null>(null);
-  const [aisLinkNotice, setAisLinkNotice] = useState<string | null>(null);
   const specificationRef = useRef<View>(null);
   const aisCountdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const aisTimeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -97,7 +91,6 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
     aisTimeoutTimerRef.current = setTimeout(() => {
       clearAisHandoffTimers();
       setIsOpeningAis(false);
-      setAisLinkNotice("外部連結尚未開啟，請確認瀏覽器或網路後重試。");
     }, AIS_HANDOFF_TIMEOUT_MS);
   }, [clearAisHandoffTimers]);
 
@@ -127,7 +120,6 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
       if (returnedFromExternalApp && isOpeningAisRef.current) {
         clearAisHandoffTimers();
         setIsOpeningAis(false);
-        setAisLinkNotice("已返回應用程式；外部頁面是否載入仍取決於瀏覽器與網路。若未開啟，可再試一次。");
       }
     });
     return () => subscription.remove();
@@ -161,6 +153,18 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
     }
   };
 
+  const shareShipSpecifications = async () => {
+    const target = getOfficialAisTrackingTarget(ship);
+    const aisTrackingText = target.isDirect
+      ? `交通部官方 AIS 追蹤：可用 IMO ${target.lookupValue} 開啟單船追蹤。`
+      : `交通部官方 AIS 追蹤：請於官方搜尋頁使用${target.lookupLabel}「${target.lookupValue}」查詢。`;
+    try {
+      await Share.share({ message: buildShipSpecificationsShareText(ship, aisTrackingText), title: "高雄港船舶規格與 AIS 追蹤" });
+    } catch {
+      Alert.alert("無法分享船舶資訊", "請稍後再試一次。");
+    }
+  };
+
   const saveSpecificationsScreenshot = async () => {
     if (!specificationRef.current) return;
     if (Platform.OS === "web") {
@@ -184,7 +188,6 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
   const openOfficialAisTracking = async () => {
     if (isOpeningAis) return;
     setIsOpeningAis(true);
-    setAisLinkNotice(null);
     try {
       const target = getOfficialAisTrackingTarget(ship);
       if (!target.isDirect) {
@@ -215,13 +218,11 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
           <MaterialIcons color="#173042" name="arrow-back" size={22} />
         </Pressable>
         <Text style={styles.topBarTitle}>船舶詳情</Text>
-        <Pressable accessibilityLabel={isFavorite ? "取消收藏此船舶" : "收藏此船舶"} onPress={handleFavorite} style={({ pressed }) => [styles.favoriteButton, pressed && styles.buttonPressed]}>
-          <MaterialIcons color={isFavorite ? "#0B4F71" : "#173042"} name={isFavorite ? "bookmark" : "bookmark-border"} size={22} />
-        </Pressable>
+        <Pressable accessibilityHint="開啟系統分享面板，傳送船舶規格與 AIS 追蹤資訊" accessibilityLabel="分享船舶規格與 AIS 追蹤資訊" onPress={shareShipSpecifications} style={({ pressed }) => [styles.shareButton, pressed && styles.buttonPressed]}><MaterialIcons color="#173042" name="share" size={22} /></Pressable>
       </View>
 
       <Text style={styles.eyebrow}>VESSEL INFORMATION</Text>
-      <Text style={styles.shipName}>{ship.name}</Text>
+      <View style={styles.shipIdentityRow}><Text style={styles.shipName}>{ship.name}</Text><Pressable accessibilityLabel={isFavorite ? "取消收藏此船舶" : "收藏此船舶"} onPress={handleFavorite} style={({ pressed }) => [styles.favoriteButton, pressed && styles.buttonPressed]}><MaterialIcons color={isFavorite ? "#0B4F71" : "#173042"} name={isFavorite ? "bookmark" : "bookmark-border"} size={22} /></Pressable></View>
       {ship.chineseName ? <Text style={styles.chineseShipName}>中文船名：{ship.chineseName}</Text> : null}
       <Text style={styles.voyage}>航次 {ship.voyage}</Text>
 
@@ -248,12 +249,12 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>船舶規格</Text>
-        <View collapsable={false} ref={specificationRef} style={styles.specCaptureCard}>
-          <View style={styles.specPairRow}><SpecTile icon="directions-boat" label="英文船名" onPress={() => void copySpecificationField("英文船名", ship.name)} value={ship.name} /><SpecTile icon="translate" label="中文船名" onPress={() => void copySpecificationField("中文船名", ship.chineseName ?? "尚未提供")} value={ship.chineseName ?? "尚未提供"} /></View>
-          <View style={styles.specPairRow}><SpecTile icon="numbers" label="IMO" onPress={() => void copySpecificationField("IMO", ship.imo)} value={ship.imo} /><SpecTile icon="pin" label="MMSI" onPress={() => void copySpecificationField("MMSI", ship.mmsi ?? "尚未提供")} value={ship.mmsi ?? "尚未提供"} /></View>
-          <View style={styles.specPairRow}><SpecTile icon="settings-input-antenna" label="呼號" onPress={() => void copySpecificationField("呼號", ship.callSign ?? "尚未提供")} value={ship.callSign ?? "尚未提供"} /><SpecTile icon="tag" label="官方船舶編號" onPress={() => void copySpecificationField("官方船舶編號", ship.vesselNumber ?? "尚未提供")} value={ship.vesselNumber ?? "尚未提供"} /></View>
-          <View style={styles.specPairRow}><SpecTile icon="directions-boat" label="船型" onPress={() => void copySpecificationField("船型", ship.vesselType)} value={ship.vesselType} /><SpecTile icon="public" label="船籍" onPress={() => void copySpecificationField("船籍", ship.flag)} value={ship.flag} /></View>
-          <View style={styles.specPairRow}><SpecTile icon="straighten" label="船總長度" onPress={() => void copySpecificationField("船總長度", ship.overallLength ?? "尚未提供")} value={ship.overallLength ?? "尚未提供"} /><SpecTile icon="route" label="總噸位" onPress={() => void copySpecificationField("總噸位", ship.grossTonnage)} value={ship.grossTonnage} /></View>
+        <View collapsable={false} ref={specificationRef} style={[styles.specCaptureCard, styles.specCaptureCardSpacious]}>
+          <View style={[styles.specPairRow, styles.specPairRowSpacious]}><SpecTile icon="directions-boat" label="英文船名" onPress={() => void copySpecificationField("英文船名", ship.name)} value={ship.name} /><SpecTile icon="translate" label="中文船名" onPress={() => void copySpecificationField("中文船名", ship.chineseName ?? "尚未提供")} value={ship.chineseName ?? "尚未提供"} /></View>
+          <View style={[styles.specPairRow, styles.specPairRowSpacious]}><SpecTile icon="numbers" label="IMO" onPress={() => void copySpecificationField("IMO", ship.imo)} value={ship.imo} /><SpecTile icon="pin" label="MMSI" onPress={() => void copySpecificationField("MMSI", ship.mmsi ?? "尚未提供")} value={ship.mmsi ?? "尚未提供"} /></View>
+          <View style={[styles.specPairRow, styles.specPairRowSpacious]}><SpecTile icon="settings-input-antenna" label="呼號" onPress={() => void copySpecificationField("呼號", ship.callSign ?? "尚未提供")} value={ship.callSign ?? "尚未提供"} /><SpecTile icon="tag" label="官方船舶編號" onPress={() => void copySpecificationField("官方船舶編號", ship.vesselNumber ?? "尚未提供")} value={ship.vesselNumber ?? "尚未提供"} /></View>
+          <View style={[styles.specPairRow, styles.specPairRowSpacious]}><SpecTile icon="directions-boat" label="船型" value={ship.vesselType} /><SpecTile icon="public" label="船籍" value={ship.flag} /></View>
+          <View style={[styles.specPairRow, styles.specPairRowSpacious]}><SpecTile icon="straighten" label="船總長度" value={ship.overallLength ?? "尚未提供"} /><SpecTile icon="route" label="總噸位" value={ship.grossTonnage} /></View>
         </View>
         <View style={styles.specActionRow}><Pressable accessibilityLabel="複製全部船舶規格" onPress={copySpecifications} style={({ pressed }) => [styles.specAction, pressed && styles.buttonPressed]}><MaterialIcons color="#0B5D7E" name="content-copy" size={18} /><Text style={styles.specActionText}>整區複製</Text></Pressable><Pressable accessibilityLabel="將船舶規格截圖儲存至相簿" onPress={saveSpecificationsScreenshot} style={({ pressed }) => [styles.specAction, pressed && styles.buttonPressed]}><MaterialIcons color="#0B5D7E" name="photo-camera" size={18} /><Text style={styles.specActionText}>規格截圖</Text></Pressable></View>
         {specActionNotice ? <Text accessibilityLiveRegion="polite" style={styles.specActionNotice}>{specActionNotice}</Text> : null}
@@ -282,7 +283,6 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
             </View>
           </View>
           <Pressable accessibilityHint="將提出開啟交通部官方 AIS 船舶追蹤頁的要求" accessibilityLabel="以目前船舶資料開啟交通部官方 AIS 追蹤" accessibilityState={{ busy: isOpeningAis, disabled: isOpeningAis }} disabled={isOpeningAis} onPress={openOfficialAisTracking} style={({ pressed }) => [styles.aisTrackingLink, isOpeningAis && styles.aisTrackingLinkLoading, pressed && styles.buttonPressed]}>{isOpeningAis ? <ActivityIndicator color="#FFFFFF" size="small" /> : <View style={styles.aisTrackingIcon}><MaterialIcons color="#FFFFFF" name="my-location" size={20} /></View>}<View style={styles.aisTrackingCopy}><Text style={styles.aisTrackingTitle}>{isOpeningAis ? "正在開啟外部連結" : "交通部官方 AIS 單船追蹤"}</Text><Text numberOfLines={2} style={styles.aisTrackingText}>{isOpeningAis ? aisCountdown ? `已提出開啟要求；${aisCountdown} 秒後未切換將提示。` : "正在確認可用的外部連結。" : "優先以 IMO 直接開啟；未提供 IMO 時會先複製呼號或船名。"}</Text></View>{isOpeningAis ? <Text style={styles.aisTrackingOpening}>{aisCountdown ? `${aisCountdown} 秒` : "確認中"}</Text> : <MaterialIcons color="#FFFFFF" name="open-in-new" size={18} />}</Pressable>
-          {aisLinkNotice ? <View accessibilityLiveRegion="polite" style={styles.aisNotice}><MaterialIcons color="#8A4E0E" name="info-outline" size={18} /><View style={styles.aisNoticeCopy}><Text style={styles.aisNoticeText}>{aisLinkNotice}</Text><Pressable accessibilityLabel="重新嘗試開啟交通部官方 AIS" onPress={openOfficialAisTracking} style={({ pressed }) => [styles.aisNoticeRetry, pressed && styles.buttonPressed]}><Text style={styles.aisNoticeRetryText}>重試開啟</Text><MaterialIcons color="#0B5D7E" name="refresh" size={15} /></Pressable></View></View> : null}
         </View>
       </View>
 
@@ -324,10 +324,12 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 30, paddingHorizontal: 20 },
   topBar: { alignItems: "center", flexDirection: "row", height: 46, justifyContent: "space-between", marginBottom: 12 },
   backButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, favoriteButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, topBarTitle: { color: "#173042", fontSize: 16, fontWeight: "800" },
+  shareButton: { alignItems: "center", borderRadius: 20, justifyContent: "center", minHeight: 40, minWidth: 40 }, shipIdentityRow: { alignItems: "flex-start", flexDirection: "row" },
   eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 }, shipName: { color: "#173042", flexShrink: 1, fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 }, chineseShipName: { color: "#52717D", flexShrink: 1, fontSize: 14, fontWeight: "700", lineHeight: 21, marginTop: 3 }, voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
   statusBanner: { alignItems: "center", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 22, padding: 13 }, statusIcon: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", width: 36 }, statusCopy: { flex: 1, marginLeft: 10 }, statusLabel: { fontSize: 15, fontWeight: "800", lineHeight: 20 }, statusDescription: { color: "#506773", fontSize: 12, lineHeight: 18, marginTop: 1 },
   section: { marginTop: 25 }, sectionTitle: { color: "#173042", fontSize: 16, fontWeight: "800", marginBottom: 9 }, infoCard: { backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 16, borderWidth: 1, paddingHorizontal: 15 }, journeyRoute: { alignItems: "center", backgroundColor: "#EDF8FB", borderBottomColor: "#D1E8EF", borderBottomWidth: 1, flexDirection: "row", marginHorizontal: -15, paddingHorizontal: 14, paddingVertical: 13 }, journeyStop: { flex: 1, minWidth: 0 }, journeyStopEnd: { alignItems: "flex-end" }, journeyLabel: { color: "#3B687B", fontSize: 11, fontWeight: "800", lineHeight: 16 }, journeyValue: { color: "#164B63", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 2 }, journeyConnector: { alignItems: "center", paddingHorizontal: 8 }, journeyConnectorText: { color: "#0B5D7E", fontSize: 10, fontWeight: "800", lineHeight: 14 }, detailRow: { alignItems: "flex-start", borderBottomColor: "#E7EEF1", borderBottomWidth: 1, flexDirection: "row", minHeight: 49, paddingVertical: 12 }, detailLabel: { color: "#3F6475", flex: 0.45, fontSize: 13, fontWeight: "800", lineHeight: 19, paddingRight: 8 }, detailValue: { color: "#284252", flex: 0.55, fontSize: 13, fontWeight: "700", lineHeight: 19, textAlign: "right" },
   journeyStopPressed: { opacity: 0.66 },
+  specCaptureCardSpacious: { gap: 14, padding: 3 }, specPairRowSpacious: { gap: 12 }, specTileSpacious: { minHeight: 116, paddingHorizontal: 13, paddingVertical: 15 }, specTileCopyHintSpacious: { alignSelf: "flex-end", marginTop: 10 },
   specCaptureCard: { backgroundColor: "#F8FBFC", borderRadius: 16, gap: 10, padding: 1 }, specPairRow: { flexDirection: "row", gap: 10 }, specTile: { backgroundColor: "#FFFFFF", borderColor: "#C8E0E8", borderRadius: 14, borderWidth: 1, flex: 1, minHeight: 93, minWidth: 0, padding: 12 }, specLabel: { color: "#3F6475", fontSize: 11, fontWeight: "800", lineHeight: 16, marginTop: 6 }, specValue: { color: "#284252", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 2 }, specActionRow: { flexDirection: "row", gap: 10, marginTop: 11 }, specAction: { alignItems: "center", backgroundColor: "#EAF6FA", borderColor: "#B7DCE8", borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", justifyContent: "center", minHeight: 43 }, specActionText: { color: "#0B5D7E", fontSize: 13, fontWeight: "800", marginLeft: 6 }, specActionNotice: { color: "#167A54", fontSize: 12, fontWeight: "700", lineHeight: 18, marginTop: 7, textAlign: "center" }, voyageCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 14, borderWidth: 1, flexDirection: "row", marginTop: 10, minHeight: 48, paddingHorizontal: 13 }, voyageCardLabel: { color: "#3F6475", fontSize: 12, fontWeight: "800", marginLeft: 8 }, voyageCardValue: { color: "#284252", flex: 1, fontSize: 13, fontWeight: "800", textAlign: "right" }, dashboardSummaryRow: { flexDirection: "row", gap: 10, marginHorizontal: -5, paddingHorizontal: 5, paddingTop: DASHBOARD_SUMMARY_LAYOUT.rowTopPadding }, dashboardSummaryCard: { backgroundColor: "#F1F9FB", borderColor: "#B7DCE8", borderRadius: 14, borderWidth: 1, flex: 1, minHeight: DASHBOARD_SUMMARY_LAYOUT.cardMinHeight, minWidth: 0, padding: 11 }, dashboardSummaryHeader: { alignItems: "flex-start", flexDirection: "row", minHeight: DASHBOARD_SUMMARY_LAYOUT.headerMinHeight }, dashboardSummaryIcon: { alignItems: "center", backgroundColor: "#DDF1F6", borderRadius: 10, height: 30, justifyContent: "center", width: 30 }, dashboardSummaryLabel: { color: "#0B5D7E", flex: 1, fontSize: 12, fontWeight: "800", lineHeight: 18, marginLeft: 7 }, dashboardSummaryValue: { color: "#284252", flex: 1, fontSize: 12, fontWeight: "800", lineHeight: DASHBOARD_SUMMARY_LAYOUT.contentLineHeight, marginTop: 8 }, dashboardSummaryAction: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#B7DCE8", borderRadius: 9, borderWidth: 1, flexDirection: "row", justifyContent: "center", marginTop: 9, minHeight: DASHBOARD_SUMMARY_LAYOUT.actionMinHeight, paddingHorizontal: 7 }, dashboardSummaryActionText: { color: "#0B5D7E", fontSize: 11, fontWeight: "800", marginRight: 3 }, aisTrackingLink: { alignItems: "center", backgroundColor: "#0B5D7E", borderColor: "#08465F", borderRadius: 14, borderWidth: 1, flexDirection: "row", marginBottom: AIS_TRACKING_LAYOUT.bottomSpacing, marginTop: AIS_TRACKING_LAYOUT.topSpacing, minHeight: 70, paddingHorizontal: 14 }, aisTrackingLinkLoading: { backgroundColor: "#136A89", borderColor: "#0B5D7E" }, aisTrackingIcon: { alignItems: "center", backgroundColor: "#2587A8", borderRadius: 18, height: 36, justifyContent: "center", width: 36 }, aisTrackingCopy: { flex: 1, marginHorizontal: 10, minWidth: 0 }, aisTrackingTitle: { color: "#FFFFFF", fontSize: 14, fontWeight: "800", lineHeight: 20 }, aisTrackingText: { color: "#D5EDF4", fontSize: 11, lineHeight: 16, marginTop: 2 }, aisTrackingOpening: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
   specTilePressed: { backgroundColor: "#EAF7FA", borderColor: "#6DB4C8", opacity: 0.84, transform: [{ scale: 0.985 }] }, specTileCopyHint: { alignItems: "center", flexDirection: "row", marginTop: 5 }, specTileCopyHintText: { color: "#5D8797", fontSize: 10, fontWeight: "800", marginLeft: 3 }, dashboardSummaryRowCompact: { flexDirection: "column" }, dashboardSummaryCardCompact: { alignSelf: "stretch", flexGrow: 0, width: "100%" },
   aisNotice: { alignItems: "flex-start", backgroundColor: "#FFF4E5", borderColor: "#F0CEA3", borderRadius: 12, borderWidth: 1, flexDirection: "row", marginTop: -5, padding: 11 }, aisNoticeCopy: { flex: 1, marginLeft: 7 }, aisNoticeText: { color: "#7A4A16", fontSize: 12, fontWeight: "700", lineHeight: 18 }, aisNoticeRetry: { alignItems: "center", alignSelf: "flex-start", flexDirection: "row", marginTop: 7, minHeight: 28 }, aisNoticeRetryText: { color: "#0B5D7E", fontSize: 12, fontWeight: "800", marginRight: 4 }, noteCard: { alignItems: "flex-start", backgroundColor: "#EAF5F8", borderRadius: 15, flexDirection: "row", marginTop: 25, padding: 14 }, noteCopy: { flex: 1, marginLeft: 9 }, noteTitle: { color: "#176B85", fontSize: 13, fontWeight: "800", lineHeight: 18 }, noteText: { color: "#476775", fontSize: 13, lineHeight: 19, marginTop: 3 }, updatedRow: { alignItems: "center", flexDirection: "row", gap: 5, marginTop: 20 }, updatedText: { color: "#6C7C87", fontSize: 12, lineHeight: 18 }, disclaimer: { color: "#7A8991", fontSize: 11, lineHeight: 17, marginTop: 5 },

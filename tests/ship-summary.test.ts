@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildShipSpecificationsText, buildVisaSummaryText, formatCopyableShipField } from "../lib/ship-summary";
+import { buildShipSpecificationsShareText, buildShipSpecificationsText, buildVisaSummaryText, formatCopyableShipField } from "../lib/ship-summary";
 import { shipRecords } from "../lib/ships";
 
 describe("簽證船舶摘要", () => {
@@ -37,5 +37,13 @@ describe("船舶規格摘要", () => {
   it("為每張可點擊的規格卡片建立一致的單欄位複製文字", () => {
     expect(formatCopyableShipField("IMO", "9384621")).toBe("IMO：9384621");
     expect(formatCopyableShipField("中文船名", "尚未提供")).toBe("中文船名：尚未提供");
+  });
+
+  it("分享內容保留完整規格、目前狀態與可驗證的 AIS 追蹤說明", () => {
+    const shareText = buildShipSpecificationsShareText(shipRecords[0], "交通部官方 AIS 追蹤：可用 IMO 9384621 開啟單船追蹤。");
+
+    expect(shareText).toContain("高雄港船舶規格摘要");
+    expect(shareText).toContain("目前狀態：在港");
+    expect(shareText).toContain("交通部官方 AIS 追蹤：可用 IMO 9384621 開啟單船追蹤。");
   });
 });

@@ -38,6 +38,11 @@ export function buildShipSpecificationsText(ship: ShipRecord): string {
   return lines.join("\n");
 }
 
+/** Creates a plain-text payload for sharing vessel specifications and AIS tracking readiness. */
+export function buildShipSpecificationsShareText(ship: ShipRecord, aisTrackingText: string): string {
+  return [buildShipSpecificationsText(ship), `目前狀態：${ship.entryExitStatus ?? SHIP_STATUS_META[ship.status].label}`, aisTrackingText].join("\n\n");
+}
+
 /** Creates the compact payload copied by one vessel specification tile. */
 export function formatCopyableShipField(label: string, value: string): string {
   return `${label}：${value}`;
