@@ -97,6 +97,14 @@ const config: ExpoConfig = {
       },
     ],
     [
+      "expo-media-library",
+      {
+        photosPermission: "Allow $(PRODUCT_NAME) to access your photos.",
+        savePhotosPermission: "Allow $(PRODUCT_NAME) to save visa summary screenshots to your photos.",
+        granularPermissions: ["photo"],
+      },
+    ],
+    [
       "expo-audio",
       {
         microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",

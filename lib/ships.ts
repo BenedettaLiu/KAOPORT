@@ -3,6 +3,11 @@ export type ShipStatus = "berthed" | "arriving" | "departing";
 export type ShipRecord = {
   id: string;
   name: string;
+  chineseName?: string;
+  mmsi?: string;
+  callSign?: string;
+  vesselNumber?: string;
+  overallLength?: string;
   voyage: string;
   imo: string;
   vesselType: string;
@@ -12,10 +17,16 @@ export type ShipRecord = {
   eta: string | null;
   etd: string | null;
   actualArrival: string | null;
+  departureTime?: string | null;
+  signalTime?: string | null;
   originPort: string;
   lastUpdated: string;
   destination: string;
   grossTonnage: string;
+  entryExitStatus?: string;
+  operationPurpose?: string;
+  pilotApplicationName?: string;
+  pilotApplicationNumber?: string;
   note: string;
 };
 
@@ -189,11 +200,11 @@ export function filterShips(records: ShipRecord[], query: string, filter: ShipFi
     const matchesFilter = filter === "all" || ship.status === filter;
     const matchesQuery =
       normalizedQuery.length === 0 ||
-      [ship.name, ship.voyage, ship.imo, ship.berth, ship.originPort].some((value) =>
+      [ship.name, ship.chineseName ?? "", ship.voyage, ship.imo, ship.berth, ship.originPort].some((value) =>
         value.toLocaleLowerCase().includes(normalizedQuery),
       );
 
-    return matchesFilter && matchesQuery && includesNormalized(ship.name, advanced.name) && includesNormalized(ship.originPort, advanced.originPort);
+    return matchesFilter && matchesQuery && (includesNormalized(ship.name, advanced.name) || includesNormalized(ship.chineseName ?? "", advanced.name)) && includesNormalized(ship.originPort, advanced.originPort);
   });
 }
 
@@ -225,7 +236,7 @@ export function filterUpcomingArrivals(
   return getUpcomingArrivals(records, now).filter((ship) => (
     (berth === "all" || ship.berth === berth)
     && (vesselType === "all" || ship.vesselType === vesselType)
-    && includesNormalized(ship.name, advanced.name)
+    && (includesNormalized(ship.name, advanced.name) || includesNormalized(ship.chineseName ?? "", advanced.name))
     && includesNormalized(ship.originPort, advanced.originPort)
   ));
 }
