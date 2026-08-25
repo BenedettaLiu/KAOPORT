@@ -4,7 +4,7 @@ import * as Linking from "expo-linking";
 import * as MediaLibrary from "expo-media-library";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
-import { Alert, Platform, ScrollView, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, ScrollView, Pressable, StyleSheet, Text, View } from "react-native";
 import { captureRef } from "react-native-view-shot";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -41,27 +41,11 @@ async function openOfficialDashboard(url: string, label: string): Promise<void> 
   }
 }
 
-async function openOfficialAisTracking(ship: ShipRecord): Promise<void> {
-  const target = getOfficialAisTrackingTarget(ship);
-  try {
-    if (!target.isDirect) {
-      await Clipboard.setStringAsync(target.lookupValue);
-      Alert.alert(
-        "已備妥官方 AIS 搜尋字",
-        `交通部 AIS 未公開可驗證的${target.lookupLabel}網址參數；已複製「${target.lookupValue}」。開啟後請貼入官方搜尋欄。`,
-      );
-    }
-    if (!(await Linking.canOpenURL(target.url))) throw new Error("不支援外部網址");
-    await Linking.openURL(target.url);
-  } catch {
-    Alert.alert("無法開啟官方 AIS", "目前無法開啟交通部官方 AIS 船舶追蹤頁，請稍後再試。 ");
-  }
-}
-
 function ShipDetail({ ship }: { ship: ShipRecord }) {
   const meta = SHIP_STATUS_META[ship.status];
   const [isFavorite, setIsFavorite] = useState(false);
   const [specActionNotice, setSpecActionNotice] = useState<string | null>(null);
+  const [isOpeningAis, setIsOpeningAis] = useState(false);
   const specificationRef = useRef<View>(null);
 
   useEffect(() => {
@@ -98,6 +82,27 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
       setSpecActionNotice("船舶規格截圖已儲存至相簿");
     } catch {
       Alert.alert("無法儲存截圖", "請確認相簿權限後再試一次。");
+    }
+  };
+
+  const openOfficialAisTracking = async () => {
+    if (isOpeningAis) return;
+    setIsOpeningAis(true);
+    try {
+      const target = getOfficialAisTrackingTarget(ship);
+      if (!target.isDirect) {
+        await Clipboard.setStringAsync(target.lookupValue);
+        Alert.alert(
+          "已備妥官方 AIS 搜尋字",
+          `交通部 AIS 未公開可驗證的${target.lookupLabel}網址參數；已複製「${target.lookupValue}」。開啟後請貼入官方搜尋欄。`,
+        );
+      }
+      if (!(await Linking.canOpenURL(target.url))) throw new Error("不支援外部網址");
+      await Linking.openURL(target.url);
+    } catch {
+      Alert.alert("無法開啟官方 AIS", "目前無法開啟交通部官方 AIS 船舶追蹤頁，請稍後再試。 ");
+    } finally {
+      setIsOpeningAis(false);
     }
   };
 
@@ -162,8 +167,8 @@ function ShipDetail({ ship }: { ship: ShipRecord }) {
           <DetailRow label="引水出發時間" value={formatShipTime(ship.departureTime ?? null)} />
           <DetailRow label="港代理名稱" value={ship.pilotApplicationName ?? "尚未提供"} />
           <DetailRow label="代理編號" value={ship.pilotApplicationNumber ?? "尚未提供"} />
-          <View style={styles.dashboardSummaryRow}><View style={styles.dashboardSummaryCard}><View style={styles.dashboardSummaryHeader}><MaterialIcons color="#0B5D7E" name="dynamic-feed" size={18} /><Text style={styles.dashboardSummaryLabel}>最新事件</Text></View><Text numberOfLines={3} style={styles.dashboardSummaryValue}>{ship.operationPurpose ?? "尚未提供"}</Text><Pressable accessibilityLabel="開啟最新動態看板" onPress={() => openOfficialDashboard(OFFICIAL_LATEST_MOVEMENT_URL, "最新動態看板")} style={({ pressed }) => [styles.dashboardSummaryAction, pressed && styles.buttonPressed]}><Text style={styles.dashboardSummaryActionText}>最新動態看板</Text><MaterialIcons color="#0B5D7E" name="open-in-new" size={15} /></Pressable></View><View style={styles.dashboardSummaryCard}><View style={styles.dashboardSummaryHeader}><MaterialIcons color="#0B5D7E" name="event-note" size={18} /><Text style={styles.dashboardSummaryLabel}>最新船期航行狀況</Text></View><Text numberOfLines={3} style={styles.dashboardSummaryValue}>{ship.entryExitStatus ?? SHIP_STATUS_META[ship.status].label}</Text><Pressable accessibilityLabel="開啟最新船期看板" onPress={() => openOfficialDashboard(OFFICIAL_LATEST_SCHEDULE_URL, "最新船期看板")} style={({ pressed }) => [styles.dashboardSummaryAction, pressed && styles.buttonPressed]}><Text style={styles.dashboardSummaryActionText}>最新船期看板</Text><MaterialIcons color="#0B5D7E" name="open-in-new" size={15} /></Pressable></View></View>
-          <Pressable accessibilityLabel="以目前船舶資料開啟交通部官方 AIS 追蹤" onPress={() => openOfficialAisTracking(ship)} style={({ pressed }) => [styles.aisTrackingLink, pressed && styles.buttonPressed]}><MaterialIcons color="#0B5D7E" name="my-location" size={20} /><View style={styles.aisTrackingCopy}><Text style={styles.aisTrackingTitle}>交通部官方 AIS 單船追蹤</Text><Text numberOfLines={2} style={styles.aisTrackingText}>優先以 IMO 直接開啟；未提供 IMO 時會先複製呼號或船名。</Text></View><MaterialIcons color="#0B5D7E" name="open-in-new" size={18} /></Pressable>
+          <View style={styles.dashboardSummaryRow}><View style={styles.dashboardSummaryCard}><View style={styles.dashboardSummaryHeader}><View style={styles.dashboardSummaryIcon}><MaterialIcons color="#0B5D7E" name="dynamic-feed" size={17} /></View><Text numberOfLines={2} style={styles.dashboardSummaryLabel}>最新事件</Text></View><Text numberOfLines={3} style={styles.dashboardSummaryValue}>{ship.operationPurpose ?? "尚未提供"}</Text><Pressable accessibilityLabel="開啟最新動態看板" onPress={() => openOfficialDashboard(OFFICIAL_LATEST_MOVEMENT_URL, "最新動態看板")} style={({ pressed }) => [styles.dashboardSummaryAction, pressed && styles.buttonPressed]}><Text style={styles.dashboardSummaryActionText}>開啟看板</Text><MaterialIcons color="#0B5D7E" name="open-in-new" size={15} /></Pressable></View><View style={styles.dashboardSummaryCard}><View style={styles.dashboardSummaryHeader}><View style={styles.dashboardSummaryIcon}><MaterialIcons color="#0B5D7E" name="event-note" size={17} /></View><Text numberOfLines={2} style={styles.dashboardSummaryLabel}>最新船期{`\n`}航行狀況</Text></View><Text numberOfLines={3} style={styles.dashboardSummaryValue}>{ship.entryExitStatus ?? SHIP_STATUS_META[ship.status].label}</Text><Pressable accessibilityLabel="開啟最新船期看板" onPress={() => openOfficialDashboard(OFFICIAL_LATEST_SCHEDULE_URL, "最新船期看板")} style={({ pressed }) => [styles.dashboardSummaryAction, pressed && styles.buttonPressed]}><Text style={styles.dashboardSummaryActionText}>開啟看板</Text><MaterialIcons color="#0B5D7E" name="open-in-new" size={15} /></Pressable></View></View>
+          <Pressable accessibilityHint="將開啟交通部官方 AIS 船舶追蹤頁" accessibilityLabel="以目前船舶資料開啟交通部官方 AIS 追蹤" accessibilityState={{ busy: isOpeningAis, disabled: isOpeningAis }} disabled={isOpeningAis} onPress={openOfficialAisTracking} style={({ pressed }) => [styles.aisTrackingLink, isOpeningAis && styles.aisTrackingLinkLoading, pressed && styles.buttonPressed]}>{isOpeningAis ? <ActivityIndicator color="#FFFFFF" size="small" /> : <View style={styles.aisTrackingIcon}><MaterialIcons color="#FFFFFF" name="my-location" size={20} /></View>}<View style={styles.aisTrackingCopy}><Text style={styles.aisTrackingTitle}>{isOpeningAis ? "正在開啟外部連結" : "交通部官方 AIS 單船追蹤"}</Text><Text numberOfLines={2} style={styles.aisTrackingText}>{isOpeningAis ? "請稍候，正在連線至官方船舶追蹤系統。" : "優先以 IMO 直接開啟；未提供 IMO 時會先複製呼號或船名。"}</Text></View>{isOpeningAis ? <Text style={styles.aisTrackingOpening}>連線中</Text> : <MaterialIcons color="#FFFFFF" name="open-in-new" size={18} />}</Pressable>
         </View>
       </View>
 
@@ -193,7 +198,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: "#137A9B", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, lineHeight: 16 }, shipName: { color: "#173042", flexShrink: 1, fontSize: 27, fontWeight: "800", letterSpacing: -0.4, lineHeight: 35, marginTop: 3 }, chineseShipName: { color: "#52717D", flexShrink: 1, fontSize: 14, fontWeight: "700", lineHeight: 21, marginTop: 3 }, voyage: { color: "#657984", fontSize: 14, fontWeight: "600", lineHeight: 21, marginTop: 2 },
   statusBanner: { alignItems: "center", borderRadius: 16, borderWidth: 1, flexDirection: "row", marginTop: 22, padding: 13 }, statusIcon: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", width: 36 }, statusCopy: { flex: 1, marginLeft: 10 }, statusLabel: { fontSize: 15, fontWeight: "800", lineHeight: 20 }, statusDescription: { color: "#506773", fontSize: 12, lineHeight: 18, marginTop: 1 },
   section: { marginTop: 25 }, sectionTitle: { color: "#173042", fontSize: 16, fontWeight: "800", marginBottom: 9 }, infoCard: { backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 16, borderWidth: 1, paddingHorizontal: 15 }, journeyRoute: { alignItems: "center", backgroundColor: "#EDF8FB", borderBottomColor: "#D1E8EF", borderBottomWidth: 1, flexDirection: "row", marginHorizontal: -15, paddingHorizontal: 14, paddingVertical: 13 }, journeyStop: { flex: 1, minWidth: 0 }, journeyStopEnd: { alignItems: "flex-end" }, journeyLabel: { color: "#3B687B", fontSize: 11, fontWeight: "800", lineHeight: 16 }, journeyValue: { color: "#164B63", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 2 }, journeyConnector: { alignItems: "center", paddingHorizontal: 8 }, journeyConnectorText: { color: "#0B5D7E", fontSize: 10, fontWeight: "800", lineHeight: 14 }, detailRow: { alignItems: "flex-start", borderBottomColor: "#E7EEF1", borderBottomWidth: 1, flexDirection: "row", minHeight: 49, paddingVertical: 12 }, detailLabel: { color: "#3F6475", flex: 0.45, fontSize: 13, fontWeight: "800", lineHeight: 19, paddingRight: 8 }, detailValue: { color: "#284252", flex: 0.55, fontSize: 13, fontWeight: "700", lineHeight: 19, textAlign: "right" },
-  specCaptureCard: { backgroundColor: "#F8FBFC", borderRadius: 16, gap: 10, padding: 1 }, specPairRow: { flexDirection: "row", gap: 10 }, specTile: { backgroundColor: "#FFFFFF", borderColor: "#C8E0E8", borderRadius: 14, borderWidth: 1, flex: 1, minHeight: 93, minWidth: 0, padding: 12 }, specLabel: { color: "#3F6475", fontSize: 11, fontWeight: "800", lineHeight: 16, marginTop: 6 }, specValue: { color: "#284252", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 2 }, specActionRow: { flexDirection: "row", gap: 10, marginTop: 11 }, specAction: { alignItems: "center", backgroundColor: "#EAF6FA", borderColor: "#B7DCE8", borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", justifyContent: "center", minHeight: 43 }, specActionText: { color: "#0B5D7E", fontSize: 13, fontWeight: "800", marginLeft: 6 }, specActionNotice: { color: "#167A54", fontSize: 12, fontWeight: "700", lineHeight: 18, marginTop: 7, textAlign: "center" }, voyageCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 14, borderWidth: 1, flexDirection: "row", marginTop: 10, minHeight: 48, paddingHorizontal: 13 }, voyageCardLabel: { color: "#3F6475", fontSize: 12, fontWeight: "800", marginLeft: 8 }, voyageCardValue: { color: "#284252", flex: 1, fontSize: 13, fontWeight: "800", textAlign: "right" }, dashboardSummaryRow: { flexDirection: "row", gap: 10, marginHorizontal: -5, paddingHorizontal: 5, paddingTop: 12 }, dashboardSummaryCard: { backgroundColor: "#F1F9FB", borderColor: "#C7E4EC", borderRadius: 12, borderWidth: 1, flex: 1, minHeight: 153, minWidth: 0, padding: 10 }, dashboardSummaryHeader: { alignItems: "center", flexDirection: "row" }, dashboardSummaryLabel: { color: "#0B5D7E", flex: 1, fontSize: 11, fontWeight: "800", lineHeight: 16, marginLeft: 5 }, dashboardSummaryValue: { color: "#284252", flex: 1, fontSize: 12, fontWeight: "800", lineHeight: 18, marginTop: 8 }, dashboardSummaryAction: { alignItems: "center", alignSelf: "flex-start", flexDirection: "row", marginTop: 8, minHeight: 29 }, dashboardSummaryActionText: { color: "#0B5D7E", fontSize: 11, fontWeight: "800", marginRight: 2 }, aisTrackingLink: { alignItems: "center", backgroundColor: "#EAF6FA", borderColor: "#B7DCE8", borderRadius: 12, borderWidth: 1, flexDirection: "row", marginTop: 11, minHeight: 64, paddingHorizontal: 12 }, aisTrackingCopy: { flex: 1, marginHorizontal: 9, minWidth: 0 }, aisTrackingTitle: { color: "#0B5D7E", fontSize: 13, fontWeight: "800", lineHeight: 19 }, aisTrackingText: { color: "#4A6D7C", fontSize: 11, lineHeight: 16, marginTop: 2 },
+  specCaptureCard: { backgroundColor: "#F8FBFC", borderRadius: 16, gap: 10, padding: 1 }, specPairRow: { flexDirection: "row", gap: 10 }, specTile: { backgroundColor: "#FFFFFF", borderColor: "#C8E0E8", borderRadius: 14, borderWidth: 1, flex: 1, minHeight: 93, minWidth: 0, padding: 12 }, specLabel: { color: "#3F6475", fontSize: 11, fontWeight: "800", lineHeight: 16, marginTop: 6 }, specValue: { color: "#284252", fontSize: 13, fontWeight: "800", lineHeight: 19, marginTop: 2 }, specActionRow: { flexDirection: "row", gap: 10, marginTop: 11 }, specAction: { alignItems: "center", backgroundColor: "#EAF6FA", borderColor: "#B7DCE8", borderRadius: 12, borderWidth: 1, flex: 1, flexDirection: "row", justifyContent: "center", minHeight: 43 }, specActionText: { color: "#0B5D7E", fontSize: 13, fontWeight: "800", marginLeft: 6 }, specActionNotice: { color: "#167A54", fontSize: 12, fontWeight: "700", lineHeight: 18, marginTop: 7, textAlign: "center" }, voyageCard: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#DCE6EB", borderRadius: 14, borderWidth: 1, flexDirection: "row", marginTop: 10, minHeight: 48, paddingHorizontal: 13 }, voyageCardLabel: { color: "#3F6475", fontSize: 12, fontWeight: "800", marginLeft: 8 }, voyageCardValue: { color: "#284252", flex: 1, fontSize: 13, fontWeight: "800", textAlign: "right" }, dashboardSummaryRow: { flexDirection: "row", gap: 10, marginHorizontal: -5, paddingHorizontal: 5, paddingTop: 16 }, dashboardSummaryCard: { backgroundColor: "#F1F9FB", borderColor: "#B7DCE8", borderRadius: 14, borderWidth: 1, flex: 1, minHeight: 182, minWidth: 0, padding: 11 }, dashboardSummaryHeader: { alignItems: "flex-start", flexDirection: "row", minHeight: 40 }, dashboardSummaryIcon: { alignItems: "center", backgroundColor: "#DDF1F6", borderRadius: 10, height: 30, justifyContent: "center", width: 30 }, dashboardSummaryLabel: { color: "#0B5D7E", flex: 1, fontSize: 12, fontWeight: "800", lineHeight: 18, marginLeft: 7 }, dashboardSummaryValue: { color: "#284252", flex: 1, fontSize: 12, fontWeight: "800", lineHeight: 18, marginTop: 8 }, dashboardSummaryAction: { alignItems: "center", backgroundColor: "#FFFFFF", borderColor: "#B7DCE8", borderRadius: 9, borderWidth: 1, flexDirection: "row", justifyContent: "center", marginTop: 9, minHeight: 34, paddingHorizontal: 7 }, dashboardSummaryActionText: { color: "#0B5D7E", fontSize: 11, fontWeight: "800", marginRight: 3 }, aisTrackingLink: { alignItems: "center", backgroundColor: "#0B5D7E", borderColor: "#08465F", borderRadius: 14, borderWidth: 1, flexDirection: "row", marginBottom: 16, marginTop: 20, minHeight: 70, paddingHorizontal: 14 }, aisTrackingLinkLoading: { backgroundColor: "#136A89", borderColor: "#0B5D7E" }, aisTrackingIcon: { alignItems: "center", backgroundColor: "#2587A8", borderRadius: 18, height: 36, justifyContent: "center", width: 36 }, aisTrackingCopy: { flex: 1, marginHorizontal: 10, minWidth: 0 }, aisTrackingTitle: { color: "#FFFFFF", fontSize: 14, fontWeight: "800", lineHeight: 20 }, aisTrackingText: { color: "#D5EDF4", fontSize: 11, lineHeight: 16, marginTop: 2 }, aisTrackingOpening: { color: "#FFFFFF", fontSize: 11, fontWeight: "800" },
   noteCard: { alignItems: "flex-start", backgroundColor: "#EAF5F8", borderRadius: 15, flexDirection: "row", marginTop: 25, padding: 14 }, noteCopy: { flex: 1, marginLeft: 9 }, noteTitle: { color: "#176B85", fontSize: 13, fontWeight: "800", lineHeight: 18 }, noteText: { color: "#476775", fontSize: 13, lineHeight: 19, marginTop: 3 }, updatedRow: { alignItems: "center", flexDirection: "row", gap: 5, marginTop: 20 }, updatedText: { color: "#6C7C87", fontSize: 12, lineHeight: 18 }, disclaimer: { color: "#7A8991", fontSize: 11, lineHeight: 17, marginTop: 5 },
   notFound: { alignItems: "center", flex: 1, justifyContent: "center", paddingHorizontal: 30 }, notFoundTitle: { color: "#173042", fontSize: 19, fontWeight: "800", marginTop: 12 }, notFoundText: { color: "#657984", fontSize: 14, lineHeight: 21, marginTop: 5, textAlign: "center" }, returnButton: { alignItems: "center", backgroundColor: "#0B4F71", borderRadius: 18, justifyContent: "center", marginTop: 18, minHeight: 40, paddingHorizontal: 16 }, returnButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" }, buttonPressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
 });
