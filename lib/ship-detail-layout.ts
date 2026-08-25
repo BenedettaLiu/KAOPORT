@@ -2,6 +2,7 @@
 export const DASHBOARD_SUMMARY_LAYOUT = {
   actionMinHeight: 34,
   cardMinHeight: 182,
+  compactBreakpoint: 360,
   contentLineHeight: 18,
   contentLines: 3,
   headerMinHeight: 40,

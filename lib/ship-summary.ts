@@ -37,3 +37,8 @@ export function buildShipSpecificationsText(ship: ShipRecord): string {
 
   return lines.join("\n");
 }
+
+/** Creates the compact payload copied by one vessel specification tile. */
+export function formatCopyableShipField(label: string, value: string): string {
+  return `${label}：${value}`;
+}

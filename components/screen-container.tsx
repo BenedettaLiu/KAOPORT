@@ -1,6 +1,7 @@
 import { View, type ViewProps } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
+import { NetworkStatusBanner } from "@/components/network-status-banner";
 import { cn } from "@/lib/utils";
 
 export interface ScreenContainerProps extends ViewProps {
@@ -61,6 +62,7 @@ export function ScreenContainer({
         className={cn("flex-1", safeAreaClassName)}
         style={style}
       >
+        <NetworkStatusBanner />
         <View className={cn("flex-1", className)}>{children}</View>
       </SafeAreaView>
     </View>

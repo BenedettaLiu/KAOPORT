@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildShipSpecificationsText, buildVisaSummaryText } from "../lib/ship-summary";
+import { buildShipSpecificationsText, buildVisaSummaryText, formatCopyableShipField } from "../lib/ship-summary";
 import { shipRecords } from "../lib/ships";
 
 describe("簽證船舶摘要", () => {
@@ -32,5 +32,10 @@ describe("船舶規格摘要", () => {
     expect(summary).toContain("呼號：BXYZ");
     expect(summary).toContain("MMSI：尚未提供");
     expect(summary).toContain("船總長度：尚未提供");
+  });
+
+  it("為每張可點擊的規格卡片建立一致的單欄位複製文字", () => {
+    expect(formatCopyableShipField("IMO", "9384621")).toBe("IMO：9384621");
+    expect(formatCopyableShipField("中文船名", "尚未提供")).toBe("中文船名：尚未提供");
   });
 });
